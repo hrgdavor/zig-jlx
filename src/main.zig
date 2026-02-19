@@ -16,8 +16,11 @@ const HELP =
     \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
     \\  -r, --range   <range>  Filter by time/date range (e.g. "08:00..09:30")
     \\  -z, --zone    <zone>   Timezone offset for range and datetime display (e.g. +01:00)
+    \\
     \\  -v, --values  <spec>   Collect unique values for a key ([prefix:]key)
-    \\                         Prefixes: datetime, time, timems, line
+    \\                          - Optional prefixes define output format along with the key
+    \\                          - Prefixes are: datetime, time, timems, line
+    \\
     \\      --keys           Collect and list all unique keys (standalone option)
     \\
     \\When no file is given, gtlogj reads from stdin.

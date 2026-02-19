@@ -49,6 +49,7 @@ Command line parameters (implemented in `src/args.zig`):
 - `-e / --exclude <filter>` - exclude lines matching filter; repeatable; combined with config-defined exclude filters
 - `-r / --range <range>` - filter by time/date range (e.g. "08:00..09:30" or "2024-01-01 10:00..")
 - `-z / --zone <zone>` - timezone offset string (e.g. "+01:00", "-05:00", "UTC"); used for range matching and `{timestamp:datetime}` output
+- `-v / --values <spec>` - collect unique values for a key; format `[prefix:]key`; silences normal output; tracks first occurrence
 
 Filters can also be defined in the config file per folder section or profile:
 ```

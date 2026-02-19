@@ -6,6 +6,11 @@ const filter_mod = @import("filter.zig");
 
 /// Everything resolved once per run: matched config, output format, key mappings, filters.
 const LineContext = struct {
+    const ValuesConfig = struct {
+        prefix: enum { none, datetime, line },
+        key: []const u8,
+    };
+
     cfg: *const config_mod.FolderConfig,
     ts_key: []const u8,
     out_fmt: []const u8,
@@ -15,6 +20,8 @@ const LineContext = struct {
     range_filter: ?filter_mod.RangeFilter,
     /// Seconds east of UTC for display and range matching (from -z flag)
     zone_offset_secs: i64,
+    /// Optional value inspection configuration (from -v flag)
+    values_config: ?ValuesConfig,
 
     fn deinit(self: *LineContext, allocator: std.mem.Allocator) void {
         allocator.free(self.include);
@@ -27,6 +34,8 @@ pub const Processor = struct {
     args: args_mod.Args,
     config: config_mod.Config,
     parser: parser_mod.Parser,
+    /// Track seen values for the -v option.
+    seen_values: std.StringHashMap(void),
 
     pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: config_mod.Config) Processor {
         return .{
@@ -34,6 +43,7 @@ pub const Processor = struct {
             .args = args,
             .config = config,
             .parser = parser_mod.Parser.init(allocator),
+            .seen_values = std.StringHashMap(void).init(allocator),
         };
     }
 
@@ -43,6 +53,13 @@ pub const Processor = struct {
         // Resolve config, keys, and filters once — before any line is processed.
         var ctx = try self.buildContext();
         defer ctx.deinit(self.allocator);
+        defer {
+            var it = self.seen_values.keyIterator();
+            while (it.next()) |key| {
+                self.allocator.free(key.*);
+            }
+            self.seen_values.deinit();
+        }
 
         if (self.args.file_path) |path| {
             const file = try std.fs.cwd().openFile(path, .{});
@@ -132,6 +149,25 @@ pub const Processor = struct {
         else
             null;
 
+        // Optional value inspection config
+        var values_config: ?LineContext.ValuesConfig = null;
+        if (self.args.values) |vs| {
+            if (std.mem.indexOf(u8, vs, ":")) |idx| {
+                const prefix_str = vs[0..idx];
+                const key = vs[idx + 1 ..];
+                if (std.mem.eql(u8, prefix_str, "datetime")) {
+                    values_config = .{ .prefix = .datetime, .key = key };
+                } else if (std.mem.eql(u8, prefix_str, "line")) {
+                    values_config = .{ .prefix = .line, .key = key };
+                } else {
+                    // prefix not recognized, treat as key with no prefix
+                    values_config = .{ .prefix = .none, .key = vs };
+                }
+            } else {
+                values_config = .{ .prefix = .none, .key = vs };
+            }
+        }
+
         return .{
             .cfg = cfg,
             .ts_key = ts_key,
@@ -140,6 +176,7 @@ pub const Processor = struct {
             .exclude = try exclude_list.toOwnedSlice(self.allocator),
             .range_filter = range_filter,
             .zone_offset_secs = zone_offset_secs,
+            .values_config = values_config,
         };
     }
 
@@ -208,6 +245,13 @@ pub const Processor = struct {
 
         if (self.args.passthrough) {
             if (!filter_mod.passesFilter(line, ctx.include, ctx.exclude)) return;
+            // Value inspection overrides regular output
+            if (ctx.values_config) |vc| {
+                if (entry.parsed.value.object.get(vc.key)) |val| {
+                    if (try self.handleValue(val, line, &entry, ctx, writer)) return;
+                }
+                return;
+            }
             try writer.writeAll(line);
             try writer.writeAll("\n");
             return;
@@ -218,8 +262,57 @@ pub const Processor = struct {
 
         if (!filter_mod.passesFilter(formatted, ctx.include, ctx.exclude)) return;
 
+        // Value inspection overrides regular output
+        if (ctx.values_config) |vc| {
+            if (entry.parsed.value.object.get(vc.key)) |val| {
+                _ = try self.handleValue(val, formatted, &entry, ctx, writer);
+            }
+            return;
+        }
+
         try writer.writeAll(formatted);
         try writer.writeAll("\n");
+    }
+
+    fn handleValue(self: *Processor, val: std.json.Value, formatted: []const u8, entry: *const parser_mod.LogEntry, ctx: *const LineContext, writer: anytype) !bool {
+        const val_str = switch (val) {
+            .string => |s| s,
+            .integer => |n| try std.fmt.allocPrint(self.allocator, "{d}", .{n}),
+            .float => |f| try std.fmt.allocPrint(self.allocator, "{d}", .{f}),
+            .bool => |b| if (b) "true" else "false",
+            .null => "null",
+            else => "complex",
+        };
+        defer if (val != .string) self.allocator.free(val_str);
+
+        if (self.seen_values.contains(val_str)) return true;
+
+        const key = try self.allocator.dupe(u8, val_str);
+        try self.seen_values.put(key, {});
+
+        switch (ctx.values_config.?.prefix) {
+            .none => {
+                try writer.writeAll(val_str);
+                try writer.writeAll("\n");
+            },
+            .datetime => {
+                if (entry.timestamp) |ts| {
+                    const dt = try formatDatetime(self.allocator, ts, ctx.zone_offset_secs);
+                    defer self.allocator.free(dt);
+                    try writer.writeAll(dt);
+                    try writer.writeAll(" ");
+                }
+                try writer.writeAll(val_str);
+                try writer.writeAll("\n");
+            },
+            .line => {
+                try writer.writeAll(formatted);
+                try writer.writeAll("\n");
+                try writer.writeAll(val_str);
+                try writer.writeAll("\n\n");
+            },
+        }
+        return true;
     }
 
     fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, format: []const u8, cfg: *const config_mod.FolderConfig, zone_offset_secs: i64) ![]const u8 {

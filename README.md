@@ -25,6 +25,7 @@ gtlogj -c <config> [options] [file]
 | `-e <text>` | `--exclude`     | Exclude lines matching filter (repeatable)           |
 | `-r <range>`| `--range`       | Filter by time/date range (e.g. "08:00..09:30")      |
 | `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
+| `-v <spec>` | `--values`      | Collect unique values for a key (prefix:key)         |
 
 ### Input modes
 
@@ -63,7 +64,9 @@ output  = [{level}] {timestamp}: {message}
 
 A config file can have **multiple `[folders]` sections**.
 
-- **File mode**: `gtlogj` resolves the **parent directory of the log file** and matches it against each section's `paths` list (prefix match, case-insensitive). The first match wins. A section with no `paths` key acts as the fallback/default.
+- **File mode**: `gtlogj` resolves the **parent directory of the log file**.
+  - `paths`: (Optional) Comma-separated list of absolute folder paths. `gtlogj` matches the log file's parent directory against each section's `paths` list (prefix match, case-insensitive). The first match wins.
+  - If `paths` is omitted, the section acts as a **fallback** for any log file that doesn't match other sections.
 - **Stdin mode**: no file path is available, so the **first `[folders]` section** is used unconditionally. Place your most general section first if you use stdin regularly.
 
 Each `[folders]` section can contain **`[profile.<name>]`** sub-sections that override specific settings. Select a profile at runtime with `-p <name>`.
@@ -194,7 +197,59 @@ gtlogj -c app.conf -z "+02:00" -r "10:00..11:00" -i ERROR app.log
 
 ---
 
+## Value Inspection
+
+The `-v` / `--values` flag silences regular output and collects unique values for a specified JSON key. It also shows the line where each value first appeared.
+
+### Syntax
+
+`-v [prefix:]key`
+
+- `key`: The JSON key to collect unique values for (e.g., `-v level`).
+- `prefix`: (Optional) Controls what is printed for each unique value:
+    - (None): Prints only the unique values.
+    - `datetime:`: Prints the timestamp of the first occurrence followed by the value.
+    - `line:`: Prints the full formatted line, then the value, then a blank line.
+
+### Examples
+
+```sh
+# List all unique log levels
+gtlogj -v level app.log
+
+# List all unique levels with their first-occurrence timestamp
+gtlogj -v datetime:level app.log
+
+# Show the first full line that triggered each unique error message
+gtlogj -v line:message app.log -i ERROR
+```
+
+---
+
 ## Examples
+
+### Testing with included assets
+
+The repository includes `test.log` (with hourly entries for 2026-02-19) and `test.conf` to help you explore the utility features:
+
+```sh
+# Basic formatting
+gtlogj -c test.conf test.log
+
+# Range filter: morning logs only (UTC)
+gtlogj -c test.conf test.log -r "08:00..12:00"
+
+# Find first occurrence of each unique user in the afternoon
+gtlogj -c test.conf test.log -r "12:00..18:00" -v user_id
+
+# Show full lines for the first time each error message appeared today
+gtlogj -c test.conf test.log -i ERROR -v line:message
+
+# Inspect unique login events with timestamps
+gtlogj -c test.conf test.log -i "User login" -v datetime:user_id
+```
+
+### General usage
 
 ```sh
 # Default format

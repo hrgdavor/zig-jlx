@@ -16,6 +16,7 @@ const HELP =
     \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
     \\  -r, --range   <range>  Filter by time/date range (e.g. "08:00..09:30")
     \\  -z, --zone    <zone>   Timezone offset for range and datetime display (e.g. +01:00)
+    \\  -v, --values  <spec>   Collect unique values for a key (prefix:key)
     \\
     \\When no file is given, gtlogj reads from stdin.
     \\

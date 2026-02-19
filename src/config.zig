@@ -51,7 +51,7 @@ pub const Config = struct {
     pub fn deinit(self: *Config) void {
         for (self.folders.items) |*f| {
             for (f.paths) |p| self.allocator.free(p);
-            self.allocator.free(f.paths);
+            if (f.paths.len > 0) self.allocator.free(f.paths);
             if (f.timestamp_key_dupe) |k| self.allocator.free(k);
             if (f.level_key_dupe) |k| self.allocator.free(k);
             if (f.message_key_dupe) |k| self.allocator.free(k);

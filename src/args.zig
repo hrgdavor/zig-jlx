@@ -15,6 +15,8 @@ pub const Args = struct {
     range: ?[]const u8 = null,
     /// Timezone offset string from -z / --zone (e.g. "+01:00")
     zone: ?[]const u8 = null,
+    /// Value inspection string from -v / --values (e.g. "datetime:level")
+    values: ?[]const u8 = null,
 
     pub fn parse(allocator: std.mem.Allocator) !Args {
         var args = Args{};
@@ -45,6 +47,8 @@ pub const Args = struct {
                 args.range = try allocator.dupe(u8, process_args.next() orelse return error.NoRangeValue);
             } else if (std.mem.eql(u8, arg, "-z") or std.mem.eql(u8, arg, "--zone")) {
                 args.zone = try allocator.dupe(u8, process_args.next() orelse return error.NoZoneValue);
+            } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--values")) {
+                args.values = try allocator.dupe(u8, process_args.next() orelse return error.NoValuesValue);
             } else if (arg.len > 0 and arg[0] != '-') {
                 // Positional argument: treat as file path
                 if (args.file_path == null) {
@@ -67,5 +71,6 @@ pub const Args = struct {
         self.exclude_filters.deinit(allocator);
         if (self.range) |p| allocator.free(p);
         if (self.zone) |p| allocator.free(p);
+        if (self.values) |p| allocator.free(p);
     }
 };

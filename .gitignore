@@ -3,3 +3,10 @@ zig
 zig-out/bin
 build_err.txt
 test.zig
+debug_err.txt
+err_default.txt
+err_raw.txt
+out_custom.txt
+out_default.txt
+out_raw.txt
+out_timed.txt

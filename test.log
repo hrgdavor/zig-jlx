@@ -1,0 +1,10 @@
+{"@timestamp": 1708331835000, "level": "INFO", "message": "Starting application", "logger": "main"}
+Some prefix text {"@timestamp": 1708331836000, "level": "DEBUG", "message": "Initializing components", "logger": "init"}
+{"@timestamp": 1708331837000, "level": "ERROR", "message": "Failed to connect to database", "logger": "db", "trace": "Stack trace here..."}
+Invalid JSON line
+{"@timestamp": 1708331838000, "level": "INFO", "message": "Component started successfully", "logger": "init"}
+{"@timestamp": 1708331839000, "level": "INFO", "message": "Custom event", "custom_field": "custom_value"}
+{"@timestamp": 1708331839000, "level": "INFO", "message": "Custom event", "custom_field": "custom_value"}
+{"@timestamp": 1708331839000, "level": "INFO", "message": "Custom event", "custom_field": "custom_value"}
+{"@timestamp": 1708331839000, "level": "INFO", "message": "Custom event", "custom_field": "custom_value"}
+{"@timestamp": 1708331837000, "level": "ERROR", "message": "Failed to connect to database", "logger": "db", "trace": "Stack trace here..."}

@@ -11,6 +11,29 @@ format tables so they are readable in plain text
 # zig build tool
 zig build tool is in folder `./zig`
 
+# GitHub Actions
+
+Use `mlugg/setup-zig@v2` (not `goto-bus-stop/setup-zig` or `zigup/actions-setup-zig`) when writing GitHub Actions workflows for this project. `mlugg/setup-zig` is preferred because it uses Zig's official download mirrors correctly and handles version caching more reliably on all three runner OS types.
+
+Example:
+```yaml
+- uses: mlugg/setup-zig@v2
+  with:
+    version: '0.15.0'
+```
+
+## Release artifact packaging
+
+Compress binaries before uploading to a GitHub release — use the format conventional for the target OS:
+
+| Target OS | Format    | Tool (in Actions)                                    |
+|-----------|-----------|------------------------------------------------------|
+| Linux     | `.tar.gz` | `tar -czf archive.tar.gz -C zig-out/bin gtlogj`      |
+| macOS     | `.tar.gz` | same as Linux                                        |
+| Windows   | `.zip`    | `Compress-Archive -Path zig-out\bin\gtlogj.exe ...`  |
+
+Artifact naming convention: `gtlogj-<os>-<arch>.<ext>`, e.g. `gtlogj-linux-x86_64.tar.gz`.
+
 # Zig 0.15 API Differences & Gotchas
 
 Common API changes in Zig 0.15 that cause compilation errors.

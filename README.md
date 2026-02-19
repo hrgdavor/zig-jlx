@@ -1,8 +1,8 @@
 # gtlogj
 
-A fast command-line utility for reading and formatting structured JSON log files.
+A fast command-line utility for reading and formatting structured JSON log files. Or other text files where each line contains serialized json object.
 
-Each log line is expected to be a JSON object, optionally preceded by arbitrary text (the first `{` marks the start of JSON). Lines that are not valid JSON are silently skipped.
+Each log line can be optionally be preceded by arbitrary text (the first `{` marks the start of JSON). Lines that are not contain valid JSON (starting at first `{` until end of line) are silently skipped.
 
 ---
 

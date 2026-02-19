@@ -11,6 +11,10 @@ const LineContext = struct {
     out_fmt: []const u8,
     include: []const filter_mod.Filter,
     exclude: []const filter_mod.Filter,
+    /// Optional time/date range filter (from -r flag)
+    range_filter: ?filter_mod.RangeFilter,
+    /// Seconds east of UTC for display and range matching (from -z flag)
+    zone_offset_secs: i64,
 
     fn deinit(self: *LineContext, allocator: std.mem.Allocator) void {
         allocator.free(self.include);
@@ -119,12 +123,23 @@ pub const Processor = struct {
         for (self.args.include_filters.items) |s| try include_list.append(self.allocator, filter_mod.Filter.parse(s));
         for (self.args.exclude_filters.items) |s| try exclude_list.append(self.allocator, filter_mod.Filter.parse(s));
 
+        // Zone offset — parsed once, used for range matching and datetime formatting
+        const zone_offset_secs = filter_mod.parseZoneOffset(self.args.zone) catch 0;
+
+        // Optional range filter
+        const range_filter: ?filter_mod.RangeFilter = if (self.args.range) |rs|
+            filter_mod.RangeFilter.parse(rs, zone_offset_secs) catch null
+        else
+            null;
+
         return .{
             .cfg = cfg,
             .ts_key = ts_key,
             .out_fmt = out_fmt,
             .include = try include_list.toOwnedSlice(self.allocator),
             .exclude = try exclude_list.toOwnedSlice(self.allocator),
+            .range_filter = range_filter,
+            .zone_offset_secs = zone_offset_secs,
         };
     }
 
@@ -180,6 +195,17 @@ pub const Processor = struct {
         var entry = entry_const;
         defer entry.deinit(self.allocator);
 
+        // Range filter: checked first against the raw timestamp
+        if (ctx.range_filter) |rf| {
+            if (entry.timestamp) |ts| {
+                // Normalise ms timestamps to seconds
+                const ts_secs: i64 = if (ts > 10_000_000_000) @divTrunc(ts, 1000) else ts;
+                if (!rf.matches(ts_secs)) return;
+            }
+            // If no timestamp field, skip line — we cannot determine if it's in range
+            else return;
+        }
+
         if (self.args.passthrough) {
             if (!filter_mod.passesFilter(line, ctx.include, ctx.exclude)) return;
             try writer.writeAll(line);
@@ -187,7 +213,7 @@ pub const Processor = struct {
             return;
         }
 
-        const formatted = try self.formatEntry(&entry, ctx.out_fmt, ctx.cfg);
+        const formatted = try self.formatEntry(&entry, ctx.out_fmt, ctx.cfg, ctx.zone_offset_secs);
         defer self.allocator.free(@constCast(formatted));
 
         if (!filter_mod.passesFilter(formatted, ctx.include, ctx.exclude)) return;
@@ -196,7 +222,7 @@ pub const Processor = struct {
         try writer.writeAll("\n");
     }
 
-    fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, format: []const u8, cfg: *const config_mod.FolderConfig) ![]const u8 {
+    fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, format: []const u8, cfg: *const config_mod.FolderConfig, zone_offset_secs: i64) ![]const u8 {
         var res: []const u8 = try self.allocator.dupe(u8, format);
         errdefer self.allocator.free(@constCast(res));
 
@@ -254,7 +280,7 @@ pub const Processor = struct {
 
             if (std.mem.eql(u8, key, "timestamp") and spec != null and std.mem.eql(u8, spec.?, "datetime")) {
                 if (entry.timestamp) |ts| {
-                    replacement = try formatDatetime(self.allocator, ts);
+                    replacement = try formatDatetime(self.allocator, ts, zone_offset_secs);
                     free_replacement = true;
                 }
             } else {
@@ -293,9 +319,10 @@ pub const Processor = struct {
         };
     }
 
-    fn formatDatetime(allocator: std.mem.Allocator, timestamp: i64) ![]const u8 {
+    fn formatDatetime(allocator: std.mem.Allocator, timestamp: i64, zone_offset_secs: i64) ![]const u8 {
         var ts = timestamp;
         if (ts > 10000000000) ts = @divTrunc(ts, 1000); // ms to s
+        ts += zone_offset_secs; // shift to local time for display
 
         const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(ts) };
         const epoch_day = epoch_seconds.getEpochDay();

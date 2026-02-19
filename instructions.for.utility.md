@@ -47,6 +47,8 @@ Command line parameters (implemented in `src/args.zig`):
 - `-x / --passthrough` - output original line as-is, only for lines containing a valid JSON log entry (parsing/filtering is still performed to validate the line)
 - `-i / --include <filter>` - include only lines matching filter; repeatable; combined with config-defined include filters
 - `-e / --exclude <filter>` - exclude lines matching filter; repeatable; combined with config-defined exclude filters
+- `-r / --range <range>` - filter by time/date range (e.g. "08:00..09:30" or "2024-01-01 10:00..")
+- `-z / --zone <zone>` - timezone offset string (e.g. "+01:00", "-05:00", "UTC"); used for range matching and `{timestamp:datetime}` output
 
 Filters can also be defined in the config file per folder section or profile:
 ```

@@ -14,15 +14,17 @@ gtlogj -c <config> [options] [file]
 
 ### Options
 
-| Flag        | Long form   | Description                                          |
-|-------------|-------------|------------------------------------------------------|
-| `-c <path>` | `--config`  | Config file (**required**)                           |
-| `-t`        | `--tail`    | Tail the file — shows only newly appended lines      |
-| `-p <name>` | `--profile` | Profile name to use from the matched config section  |
-| `-o <path>` | `--output`  | Write output to a file (default: stdout)             |
+| Flag        | Long form       | Description                                          |
+|-------------|-----------------|------------------------------------------------------|
+| `-c <path>` | `--config`      | Config file (**required**)                           |
+| `-t`        | `--tail`        | Tail the file — shows only newly appended lines      |
+| `-p <name>` | `--profile`     | Profile name to use from the matched config section  |
+| `-o <path>` | `--output`      | Write output to a file (default: stdout)             |
 | `-x`        | `--passthrough` | Echo original line as-is (valid JSON lines only)     |
-| `-i <text>` | `--include` | Include only lines matching filter (repeatable)      |
-| `-e <text>` | `--exclude` | Exclude lines matching filter (repeatable)           |
+| `-i <text>` | `--include`     | Include only lines matching filter (repeatable)      |
+| `-e <text>` | `--exclude`     | Exclude lines matching filter (repeatable)           |
+| `-r <range>`| `--range`       | Filter by time/date range (e.g. "08:00..09:30")      |
+| `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
 
 ### Input modes
 
@@ -156,6 +158,38 @@ gtlogj -c app.conf app.log -e DEBUG
 
 # Combine: only ERROR lines that don't contain "healthcheck"
 gtlogj -c app.conf app.log -i ERROR -e healthcheck
+```
+
+---
+
+## Range Filtering
+
+The `-r` / `--range` flag allows filtering logs by their timestamp. Use the format `from..to`.
+
+### Syntax
+
+- `HH:MM:SS..HH:MM:SS` (time-only: matches time-of-day in the configured timezone)
+- `YYYY-MM-DD HH:MM:SS..YYYY-MM-DD HH:MM:SS` (datetime: specific absolute range)
+- Either side can be omitted: `..09:00` (until 9 AM), `2024-01-01..` (from Jan 1st)
+
+### Timezone Support
+
+Use `-z` / `--zone` to specify the timezone offset (e.g., `+01:00`, `-05:00`).
+- Affects how time-only ranges are interpreted.
+- Affects the output of `{timestamp:datetime}`.
+- Defaults to UTC if omitted.
+
+### Range Examples
+
+```sh
+# Only logs between 8:00 and 9:30 AM (local time)
+gtlogj -c app.conf -r "08:00..09:30" app.log
+
+# Logs from a specific date onwards
+gtlogj -c app.conf -r "2024-02-19.." app.log
+
+# Combine range with includes and timezone
+gtlogj -c app.conf -z "+02:00" -r "10:00..11:00" -i ERROR app.log
 ```
 
 ---

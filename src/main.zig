@@ -14,6 +14,8 @@ const HELP =
     \\  -x, --passthrough      Echo original line as-is (valid JSON lines only)
     \\  -i, --include <text>   Include only lines matching filter (repeatable)
     \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
+    \\  -r, --range   <range>  Filter by time/date range (e.g. "08:00..09:30")
+    \\  -z, --zone    <zone>   Timezone offset for range and datetime display (e.g. +01:00)
     \\
     \\When no file is given, gtlogj reads from stdin.
     \\

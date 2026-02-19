@@ -11,6 +11,10 @@ pub const Args = struct {
     include_filters: std.ArrayListUnmanaged([]const u8) = .{},
     /// Raw filter strings from -e / --exclude flags
     exclude_filters: std.ArrayListUnmanaged([]const u8) = .{},
+    /// Raw range string from -r / --range (e.g. "08:00..09:30")
+    range: ?[]const u8 = null,
+    /// Timezone offset string from -z / --zone (e.g. "+01:00")
+    zone: ?[]const u8 = null,
 
     pub fn parse(allocator: std.mem.Allocator) !Args {
         var args = Args{};
@@ -37,6 +41,10 @@ pub const Args = struct {
             } else if (std.mem.eql(u8, arg, "-e") or std.mem.eql(u8, arg, "--exclude")) {
                 const val = try allocator.dupe(u8, process_args.next() orelse return error.NoExcludeFilter);
                 try args.exclude_filters.append(allocator, val);
+            } else if (std.mem.eql(u8, arg, "-r") or std.mem.eql(u8, arg, "--range")) {
+                args.range = try allocator.dupe(u8, process_args.next() orelse return error.NoRangeValue);
+            } else if (std.mem.eql(u8, arg, "-z") or std.mem.eql(u8, arg, "--zone")) {
+                args.zone = try allocator.dupe(u8, process_args.next() orelse return error.NoZoneValue);
             } else if (arg.len > 0 and arg[0] != '-') {
                 // Positional argument: treat as file path
                 if (args.file_path == null) {
@@ -57,5 +65,7 @@ pub const Args = struct {
         self.include_filters.deinit(allocator);
         for (self.exclude_filters.items) |s| allocator.free(s);
         self.exclude_filters.deinit(allocator);
+        if (self.range) |p| allocator.free(p);
+        if (self.zone) |p| allocator.free(p);
     }
 };

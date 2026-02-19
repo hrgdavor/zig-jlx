@@ -4,7 +4,7 @@ const config_mod = @import("config.zig");
 const processor_mod = @import("processor.zig");
 
 const HELP =
-    \\Usage: gtlogj -c <config> [options] [file]
+    \\Usage: jlx -c <config> [options] [file]
     \\
     \\  -c, --config  <path>   Config file (required for most commands)
     \\  [file]                 Input log file (reads stdin if omitted)
@@ -23,9 +23,9 @@ const HELP =
     \\
     \\      --keys           Collect and list all unique keys (standalone option)
     \\
-    \\When no file is given, gtlogj reads from stdin.
+    \\When no file is given, jlx reads from stdin.
     \\
-    \\--- Sample config (save as gtlogj.conf and edit paths/keys as needed) ---
+    \\--- Sample config (save as jlx.conf and edit paths/keys as needed) ---
     \\
     \\[folders]
     \\paths     = /path/to/your/app/logs
@@ -52,6 +52,7 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     const args = try args_mod.Args.parse(allocator);
+
     var args_copy = args;
     defer args_copy.deinit(allocator);
 

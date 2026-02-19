@@ -1,6 +1,24 @@
 {"@timestamp": 1771372800000, "level": "INFO", "message": "System startup", "user_id": "system"}
 {"@timestamp": 1771376400000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
+{"@timestamp": 1771380000000, "level": "DEBUG", "message": "Cleaning cache", "user_id": "user1"}
+{"@timestamp": 1771383600000, "level": "INFO", "message": "User login", "user_id": "user2"}
+{"@timestamp": 1771387200000, "level": "ERROR", "message": "Database timeout", "user_id": "db_admin"}
+{"@timestamp": 1771390800000, "level": "INFO", "message": "Processing batch", "user_id": "user1"}
+{"@timestamp": 1771394400000, "level": "DEBUG", "message": "Metric collection", "user_id": "system"}
+{"@timestamp": 1771398000000, "level": "INFO", "message": "User logout", "user_id": "user2"}
+{"@timestamp": 1771401600000, "level": "INFO", "message": "User login", "user_id": "user3"}
+{"@timestamp": 1771405200000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
+{"@timestamp": 1771408800000, "level": "ERROR", "message": "Disk space low", "user_id": "system"}
+{"@timestamp": 1771412400000, "level": "INFO", "message": "User login", "user_id": "user4"}
+{"@timestamp": 1771416000000, "level": "INFO", "message": "Processing batch", "user_id": "user3"}
+{"@timestamp": 1771419600000, "level": "DEBUG", "message": "Cache hit optimization", "user_id": "user1"}
+{"@timestamp": 1771423200000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
+{"@timestamp": 1771426800000, "level": "ERROR", "message": "Unexpected shutdown", "user_id": "system"}
+{"@timestamp": 1771430400000, "level": "INFO", "message": "System startup", "user_id": "system"}
+{"@timestamp": 1771434000000, "level": "INFO", "message": "User login", "user_id": "user5"}
+{"@timestamp": 1771437600000, "level": "INFO", "message": "Processing batch", "user_id": "user5"}
+{"@timestamp": 1771441200000, "level": "INFO", "message": "User logout", "user_id": "user5"}
+{"@timestamp": 1771444800000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
+{"@timestamp": 1771448400000, "level": "DEBUG", "message": "Backup started", "user_id": "admin"}
 {"@timestamp": 1771452000000, "level": "INFO", "message": "Backup finished", "user_id": "admin"}
 {"@timestamp": 1771455600000, "level": "INFO", "message": "System shutdown", "user_id": "system"}
-{"@timestamp": 1771372800123, "level": "INFO", "message": "Milliseconds input (123ms)", "user_id": "system"}
-{"@timestamp": 1771459200, "level": "INFO", "message": "Seconds input (normalized to ms)", "user_id": "system"}

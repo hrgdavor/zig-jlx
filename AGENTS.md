@@ -28,11 +28,11 @@ Compress binaries before uploading to a GitHub release — use the format conven
 
 | Target OS | Format    | Tool (in Actions)                                    |
 |-----------|-----------|------------------------------------------------------|
-| Linux     | `.tar.gz` | `tar -czf archive.tar.gz -C zig-out/bin gtlogj`      |
+| Linux     | `.tar.gz` | `tar -czf archive.tar.gz -C zig-out/bin jlx`      |
 | macOS     | `.tar.gz` | same as Linux                                        |
-| Windows   | `.zip`    | `Compress-Archive -Path zig-out\bin\gtlogj.exe ...`  |
+| Windows   | `.zip`    | `Compress-Archive -Path zig-out\bin\jlx.exe ...`  |
 
-Artifact naming convention: `gtlogj-<os>-<arch>.<ext>`, e.g. `gtlogj-linux-x86_64.tar.gz`.
+Artifact naming convention: `jlx-<os>-<arch>.<ext>`, e.g. `jlx-linux-x86_64.tar.gz`.
 
 # Zig 0.15 API Differences & Gotchas
 

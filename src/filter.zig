@@ -1,27 +1,169 @@
 const std = @import("std");
 
-/// A single substring/regex filter.  Only `exact` (substring) implemented today.
-pub const Filter = union(enum) {
-    exact: []const u8,
+const mvzr = @import("mvzr");
 
-    pub fn parse(text: []const u8) Filter {
-        return .{ .exact = text };
+pub const FilterType = enum {
+    global_literal,
+    global_regex,
+    key_literal,
+    key_regex,
+};
+
+/// A filter that supports literals, regex, and key-specific matching.
+pub const Filter = struct {
+    filter_type: FilterType,
+    key: ?[]const u8 = null,
+    text: ?[]const u8 = null,
+    re: ?mvzr.Regex = null,
+
+    pub fn parse(allocator: std.mem.Allocator, input: []const u8) !Filter {
+        var is_re = false;
+        var key_part: ?[]const u8 = null;
+        var filter_part: []const u8 = input;
+
+        // Check for 'key:value'
+        if (std.mem.indexOf(u8, filter_part, ":")) |colon_idx| {
+            const possible_key = filter_part[0..colon_idx];
+            const possible_val = filter_part[colon_idx + 1 ..];
+
+            if (std.mem.eql(u8, possible_key, "re")) {
+                is_re = true;
+                filter_part = possible_val;
+            } else {
+                key_part = possible_key;
+                filter_part = possible_val;
+                if (std.mem.startsWith(u8, filter_part, "re:")) {
+                    is_re = true;
+                    filter_part = filter_part[3..];
+                }
+            }
+        }
+
+        // Check for ~ prefix
+        if (!is_re and filter_part.len > 0 and filter_part[0] == '~') {
+            is_re = true;
+            filter_part = filter_part[1..];
+        }
+
+        const ftype: FilterType = if (key_part) |_| (if (is_re) .key_regex else .key_literal) else (if (is_re) .global_regex else .global_literal);
+
+        var f = Filter{
+            .filter_type = ftype,
+        };
+
+        if (key_part) |k| {
+            f.key = try allocator.dupe(u8, k);
+        }
+
+        if (is_re) {
+            f.re = mvzr.compile(filter_part);
+            if (f.re == null) {
+                return error.InvalidRegex;
+            }
+        } else {
+            f.text = try allocator.dupe(u8, filter_part);
+        }
+
+        return f;
     }
 
-    pub fn matches(self: Filter, line: []const u8) bool {
-        return switch (self) {
-            .exact => |s| std.mem.indexOf(u8, line, s) != null,
+    pub fn deinit(self: *Filter, allocator: std.mem.Allocator) void {
+        if (self.key) |k| allocator.free(k);
+        if (self.text) |t| allocator.free(t);
+        // mvzr.Regex uses no allocation so doesn't need deinit.
+    }
+
+    /// Match Phase 1: fast global raw string check
+    pub fn matchesRaw(self: *const Filter, line: []const u8) !bool {
+        return switch (self.filter_type) {
+            .global_literal => std.mem.indexOf(u8, line, self.text.?) != null,
+            .global_regex => {
+                var self_mut = @constCast(self);
+                return self_mut.re.?.isMatch(line);
+            },
+            else => true, // Ignore key filters in raw pass
+        };
+    }
+
+    /// Match Phase 2: key-specific parsed JSON check
+    pub fn matchesParsed(self: *const Filter, parsed: std.json.Value) !bool {
+        return switch (self.filter_type) {
+            .global_literal, .global_regex => true, // Already handled in phase 1 conceptually
+            .key_literal, .key_regex => {
+                if (parsed != .object) return false;
+                if (parsed.object.get(self.key.?)) |val| {
+                    const val_str = switch (val) {
+                        .string => |s| s,
+                        else => return false, // Only string values are matched for now
+                    };
+                    if (self.filter_type == .key_literal) {
+                        return std.mem.indexOf(u8, val_str, self.text.?) != null;
+                    } else {
+                        var self_mut = @constCast(self);
+                        return self_mut.re.?.isMatch(val_str);
+                    }
+                }
+                return false;
+            },
         };
     }
 };
 
-/// Returns true if the line should be included based on include/exclude lists.
-/// - Empty include list → include everything.
-/// - Exclude takes precedence over include.
-pub fn passesFilter(line: []const u8, include: []const Filter, exclude: []const Filter) bool {
-    for (exclude) |f| if (f.matches(line)) return false;
+/// Phase 1: Check Global Excludes
+pub fn passesRawExcludes(line: []const u8, exclude: []const Filter) !bool {
+    for (exclude) |f| {
+        if (f.filter_type == .global_literal or f.filter_type == .global_regex) {
+            if (try f.matchesRaw(line)) return false;
+        }
+    }
+    return true;
+}
+
+/// Phase 1: Check Global Includes (only if no key-includes exist)
+pub fn passesRawIncludes(line: []const u8, include: []const Filter) !bool {
+    var has_global_include = false;
+    var has_key_include = false;
+    for (include) |f| {
+        if (f.filter_type == .global_literal or f.filter_type == .global_regex) {
+            has_global_include = true;
+        } else {
+            has_key_include = true;
+        }
+    }
+
+    if (has_key_include) return true; // We must parse JSON to determine if it passes
+    if (!has_global_include) return true; // No includes, so everything passes
+
+    for (include) |f| {
+        if (f.filter_type == .global_literal or f.filter_type == .global_regex) {
+            if (try f.matchesRaw(line)) return true;
+        }
+    }
+    return false; // None matched
+}
+
+/// Phase 2: Check Parsed Excludes and evaluate final Include status
+pub fn passesParsed(line: []const u8, parsed: std.json.Value, include: []const Filter, exclude: []const Filter) !bool {
+    // 1. Check Key-specific Excludes
+    for (exclude) |f| {
+        if (f.filter_type == .key_literal or f.filter_type == .key_regex) {
+            if (try f.matchesParsed(parsed)) return false;
+        }
+    }
+
     if (include.len == 0) return true;
-    for (include) |f| if (f.matches(line)) return true;
+
+    // 2. Check Includes (at least one must match)
+    for (include) |f| {
+        switch (f.filter_type) {
+            .global_literal, .global_regex => {
+                if (try f.matchesRaw(line)) return true;
+            },
+            .key_literal, .key_regex => {
+                if (try f.matchesParsed(parsed)) return true;
+            },
+        }
+    }
     return false;
 }
 

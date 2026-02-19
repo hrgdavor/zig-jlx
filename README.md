@@ -1,4 +1,4 @@
-# gtlogj
+# jlx
 
 A fast command-line utility for reading and formatting structured JSON log files. Or other text files where each line contains serialized json object.
 
@@ -9,7 +9,7 @@ Each log line can be optionally be preceded by arbitrary text (the first `{` mar
 ## Usage
 
 ```
-gtlogj -c <config> [options] [file]
+jlx -c <config> [options] [file]
 ```
 
 ### Options
@@ -32,14 +32,14 @@ gtlogj -c <config> [options] [file]
 
 ```sh
 # Read a file (positional argument)
-gtlogj -c app.conf app.log
+jlx -c app.conf app.log
 
 # Tail a file — shows only NEW lines appended after start
-gtlogj -c app.conf -t app.log
+jlx -c app.conf -t app.log
 
 # Read from stdin (no file argument)
-cat app.log | gtlogj -c app.conf
-tail -f app.log | gtlogj -c app.conf -p timed
+cat app.log | jlx -c app.conf
+tail -f app.log | jlx -c app.conf -p timed
 ```
 
 ---
@@ -65,8 +65,8 @@ output  = [{level}] {timestamp}: {message}
 
 A config file can have **multiple `[folders]` sections**.
 
-- **File mode**: `gtlogj` resolves the **parent directory of the log file**.
-  - `paths`: (Optional) Comma-separated list of absolute folder paths. `gtlogj` matches the log file's parent directory against each section's `paths` list (prefix match, case-insensitive). The first match wins.
+- **File mode**: `jlx` resolves the **parent directory of the log file**.
+  - `paths`: (Optional) Comma-separated list of absolute folder paths. `jlx` matches the log file's parent directory against each section's `paths` list (prefix match, case-insensitive). The first match wins.
   - If `paths` is omitted, the section acts as a **fallback** for any log file that doesn't match other sections.
 - **Stdin mode**: no file path is available, so the **first `[folders]` section** is used unconditionally. Place your most general section first if you use stdin regularly.
 
@@ -84,8 +84,8 @@ Each `[folders]` section can contain **`[profile.<name>]`** sub-sections that ov
 | `thread`   | `thread`                         | JSON key for the thread field                          |
 | `logger`   | `logger`                         | JSON key for the logger name field                     |
 | `trace`    | `trace`                          | JSON key for the stack trace field                     |
-| `include`  | *(none)*                         | Comma-separated filters — only matching lines shown    |
-| `exclude`  | *(none)*                         | Comma-separated filters — matching lines are hidden    |
+| `include`  | *(none)*                         | Comma-separated filters — only matching lines shown. Supports key-specific and regex matching.   |
+| `exclude`  | *(none)*                         | Comma-separated filters — matching lines are hidden. Supports key-specific and regex matching.   |
 
 ### `[profile.<name>]` keys
 
@@ -107,12 +107,36 @@ output    = {timestamp:datetime} [{level}]: {message}
 
 [profile.verbose]
 output    = {timestamp:datetime} [{level}] ({logger}): {message}
-include   = ERROR, WARN
+include   = ERROR, level:WARN, message:re:^Connection.*
 
 [folders]
 ; fallback — used when CWD doesn't match any paths above
 output    = [{level}] {timestamp}: {message}
 ```
+
+---
+
+## Filtering Rules (`-i`, `-e`, `include`, `exclude`)
+
+You can filter log messages by providing a comma-separated list of match patterns. Filters can be global (searching the raw JSON line before parsing, which is very fast) or key-specific. They also support basic substrings or Regular Expressions using the fast, lightweight `mvzr` engine.
+
+### Global Literals
+Any string without special prefixes: Searches the exact string literal across the entire raw JSON line.
+`jlx -i ERROR`  — Matches any line containing the word "ERROR".
+
+### Global Regex (`~` prefix)
+Prefix the string with `~` to trigger a Regular Expression match on the entire raw JSON line.
+`jlx -i "~^\{.*user_id.*123"` — Matches lines using regex syntax.
+
+### Key-Specific Literals (`key:value`)
+Use a `:` to isolate a search to a specific JSON key's value. Lines without the key are ignored.
+`jlx -i level:WARN` — Matches only if the `"level"` key contains `"WARN"`.
+
+### Key-Specific Regex (`key:re:value`)
+Combine the `key:` target prefix with `re:` to evaluate a Regular Expression against a specific JSON key's value. 
+`jlx -e "message:re:^Failed.*timeout"`
+
+**Note on performance:** Filtering drops non-matching lines as early as possible. Global filters (literal and regex) are evaluated against the raw JSON string *before* the JSON parser runs. Key-specific target filters require the JSON to be fully parsed first.
 
 ---
 
@@ -157,13 +181,13 @@ Filters are simple substring matches (more filter types planned). A line must pa
 
 ```sh
 # Show only ERROR lines
-gtlogj -c app.conf app.log -i ERROR
+jlx -c app.conf app.log -i ERROR
 
 # Show everything except DEBUG
-gtlogj -c app.conf app.log -e DEBUG
+jlx -c app.conf app.log -e DEBUG
 
 # Combine: only ERROR lines that don't contain "healthcheck"
-gtlogj -c app.conf app.log -i ERROR -e healthcheck
+jlx -c app.conf app.log -i ERROR -e healthcheck
 ```
 
 ---
@@ -189,13 +213,13 @@ Use `-z` / `--zone` to specify the timezone offset (e.g., `+01:00`, `-05:00`).
 
 ```sh
 # Only logs between 8:00 and 9:30 AM (local time)
-gtlogj -c app.conf -r "08:00..09:30" app.log
+jlx -c app.conf -r "08:00..09:30" app.log
 
 # Logs from a specific date onwards
-gtlogj -c app.conf -r "2024-02-19.." app.log
+jlx -c app.conf -r "2024-02-19.." app.log
 
 # Combine range with includes and timezone
-gtlogj -c app.conf -z "+02:00" -r "10:00..11:00" -i ERROR app.log
+jlx -c app.conf -z "+02:00" -r "10:00..11:00" -i ERROR app.log
 ```
 
 ---
@@ -218,13 +242,13 @@ The `-v` / `--values` flag silences regular output and collects unique values fo
 
 ```sh
 # List all unique log levels
-gtlogj -v level app.log
+jlx -v level app.log
 
 # List all unique levels with their first-occurrence timestamp
-gtlogj -v datetime:level app.log
+jlx -v datetime:level app.log
 
 # Show the first full line that triggered each unique error message
-gtlogj -v line:message app.log -i ERROR
+jlx -v line:message app.log -i ERROR
 ```
 
 ---
@@ -236,17 +260,17 @@ The `--keys` flag scans JSON log entries and collects a unique list of all keys 
 > [!TIP]
 > **For large log files**, use `--keys` with `head` to scan just a sample:
 > ```sh
-> gtlogj -c test.conf --keys test.log | head -n 100
+> jlx -c test.conf --keys test.log | head -n 100
 > ```
 
 ### Examples
 
 ```sh
 # Discover all keys in a log file (no config required!)
-gtlogj --keys app.log
+jlx --keys app.log
 
 # Also works with piped input
-cat app.log | gtlogj --keys
+cat app.log | jlx --keys
 ```
 
 ---
@@ -259,42 +283,42 @@ The repository includes `test.log` (with hourly entries for 2026-02-19) and `tes
 
 ```sh
 # Basic formatting
-gtlogj -c test.conf test.log
+jlx -c test.conf test.log
 
 # Range filter: morning logs only (UTC)
-gtlogj -c test.conf test.log -r "08:00..12:00"
+jlx -c test.conf test.log -r "08:00..12:00"
 
 # Find first occurrence of each unique user in the afternoon
-gtlogj -c test.conf test.log -r "12:00..18:00" -v user_id
+jlx -c test.conf test.log -r "12:00..18:00" -v user_id
 
 # Show full lines for the first time each error message appeared today
-gtlogj -c test.conf test.log -i ERROR -v line:message
+jlx -c test.conf test.log -i ERROR -v line:message
 
 # Inspect unique login events with timestamps
-gtlogj -c test.conf test.log -i "User login" -v datetime:user_id
+jlx -c test.conf test.log -i "User login" -v datetime:user_id
 ```
 
 ### General usage
 
 ```sh
 # Basic usage (requires a config file for most commands)
-gtlogj -c myapp.conf app.log
+jlx -c myapp.conf app.log
 
 # Command-line configuration requirement
 # The -c/--config flag is REQUIRED for all operations EXCEPT --keys.
 
 # ISO timestamp using a profile
-gtlogj -c myapp.conf -p timed app.log
+jlx -c myapp.conf -p timed app.log
 
 # Tail live log with profile
-gtlogj -c myapp.conf -p timed -t app.log
+jlx -c myapp.conf -p timed -t app.log
 
 # Pipe from kubectl
-kubectl logs my-pod | gtlogj -c k8s.conf -p timed
+kubectl logs my-pod | jlx -c k8s.conf -p timed
 
 # Output raw JSON lines for further processing
-gtlogj -c myapp.conf -x app.log | jq .message
+jlx -c myapp.conf -x app.log | jq .message
 
 # Filter while tailing
-gtlogj -c myapp.conf -t app.log -i ERROR -e "connection reset"
+jlx -c myapp.conf -t app.log -i ERROR -e "connection reset"
 ```

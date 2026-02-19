@@ -2,7 +2,7 @@
 make this a commandline utility that can read log files that are text with each line containing serialized json object, optionally prefixed with some text that can be ignored (look for first '{' in a line to assume json starts there and not required from first character)
 - if parsing a line fails, ignore that line
 
-the utility called gtlogj should work by either:
+the utility called jlx should work by either:
 - reading a file (`-t path`)
 - reading stdin (when `-t` is omitted, read from stdin automatically)
 - tailing a file (`-t path` — shows only newly appended lines; uses raw read+sleep loop so new bytes are always detected)
@@ -60,7 +60,7 @@ include = ERROR, WARN
 exclude = healthcheck
 ```
 Filter priority order: folder config → profile → CLI args (all lists are merged).
-Filter string format will be extended in future steps (regex, field-based, etc.).
+Filters can optionally target specific keys (`key:value`) or use regular expressions via the `mvzr` engine by prefixing the search string with `~` (global regex) or `re:` (target key regex, e.g., `key:re:^ERROR`).
 
 test.conf should have a profile called `timed` that outputs: `{timestamp:datetime} [{level}]: {message}`
 and a profile called `custom` that demonstrates arbitrary key placeholders, e.g.: `{timestamp} |{custom_field}|{missing_field}|: {message}`

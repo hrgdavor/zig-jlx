@@ -31,6 +31,8 @@ const LineContext = struct {
     values_config: ?ValuesConfig,
 
     fn deinit(self: *LineContext, allocator: std.mem.Allocator) void {
+        for (self.include) |*f| @constCast(f).deinit(allocator);
+        for (self.exclude) |*f| @constCast(f).deinit(allocator);
         allocator.free(self.include);
         allocator.free(self.exclude);
     }
@@ -180,18 +182,18 @@ pub const Processor = struct {
         var exclude_list: std.ArrayListUnmanaged(filter_mod.Filter) = .{};
         errdefer exclude_list.deinit(self.allocator);
 
-        for (cfg.include_filters) |s| try include_list.append(self.allocator, filter_mod.Filter.parse(s));
-        for (cfg.exclude_filters) |s| try exclude_list.append(self.allocator, filter_mod.Filter.parse(s));
+        for (cfg.include_filters) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
+        for (cfg.exclude_filters) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
 
         if (self.args.profile) |pname| {
             if (cfg.profiles.get(pname)) |p| {
-                for (p.include_filters) |s| try include_list.append(self.allocator, filter_mod.Filter.parse(s));
-                for (p.exclude_filters) |s| try exclude_list.append(self.allocator, filter_mod.Filter.parse(s));
+                for (p.include_filters) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
+                for (p.exclude_filters) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
             }
         }
 
-        for (self.args.include_filters.items) |s| try include_list.append(self.allocator, filter_mod.Filter.parse(s));
-        for (self.args.exclude_filters.items) |s| try exclude_list.append(self.allocator, filter_mod.Filter.parse(s));
+        for (self.args.include_filters.items) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
+        for (self.args.exclude_filters.items) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
 
         // Zone offset — parsed once, used for range matching and datetime formatting
         const zone_offset_secs = filter_mod.parseZoneOffset(self.args.zone) catch 0;
@@ -285,6 +287,11 @@ pub const Processor = struct {
     }
 
     fn processLine(self: *Processor, line: []const u8, writer: anytype, ctx: *const LineContext) !void {
+        // Phase 1 Filtering: Global Raw String Check
+        // If the line fails the global raw excludes or global raw includes, we can drop it immediately.
+        if (!try filter_mod.passesRawExcludes(line, ctx.exclude)) return;
+        if (!try filter_mod.passesRawIncludes(line, ctx.include)) return;
+
         const entry_const = (try self.parser.parseLine(line, ctx.ts_key)) orelse return;
         var entry = entry_const;
         defer entry.deinit(self.allocator);
@@ -312,7 +319,9 @@ pub const Processor = struct {
         }
 
         if (self.args.passthrough) {
-            if (!filter_mod.passesFilter(line, ctx.include, ctx.exclude)) return;
+            // Phase 2 Filtering: Key-Specific JSON Check
+            if (!try filter_mod.passesParsed(line, entry.parsed.value, ctx.include, ctx.exclude)) return;
+
             // Value inspection overrides regular output
             if (ctx.values_config) |vc| {
                 if (entry.parsed.value.object.get(vc.key)) |val| {
@@ -325,10 +334,11 @@ pub const Processor = struct {
             return;
         }
 
+        // Phase 2 Filtering: Key-Specific JSON Check
+        if (!try filter_mod.passesParsed(line, entry.parsed.value, ctx.include, ctx.exclude)) return;
+
         const formatted = try self.formatEntry(&entry, ctx.out_fmt, ctx.cfg, ctx.zone_offset_secs);
         defer self.allocator.free(@constCast(formatted));
-
-        if (!filter_mod.passesFilter(formatted, ctx.include, ctx.exclude)) return;
 
         // Value inspection overrides regular output
         if (ctx.values_config) |vc| {

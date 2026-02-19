@@ -14,15 +14,15 @@ gtlogj -c <config> [options] [file]
 
 ### Options
 
-| Flag        | Long form   | Description                                         |
-|-------------|-------------|-----------------------------------------------------|
-| `-c <path>` | `--config`  | Config file (**required**)                          |
-| `-t`        | `--tail`    | Tail the file — shows only newly appended lines     |
-| `-p <name>` | `--profile` | Profile name to use from the matched config section |
-| `-o <path>` | `--output`  | Write output to a file (default: stdout)            |
-| `-r`        | `--raw`     | Echo original line as-is (only for valid JSON lines)|
-| `-i <text>` | `--include` | Include only lines matching this filter (repeatable)|
-| `-e <text>` | `--exclude` | Exclude lines matching this filter (repeatable)     |
+| Flag        | Long form   | Description                                          |
+|-------------|-------------|------------------------------------------------------|
+| `-c <path>` | `--config`  | Config file (**required**)                           |
+| `-t`        | `--tail`    | Tail the file — shows only newly appended lines      |
+| `-p <name>` | `--profile` | Profile name to use from the matched config section  |
+| `-o <path>` | `--output`  | Write output to a file (default: stdout)             |
+| `-r`        | `--raw`     | Echo original line as-is (only for valid JSON lines) |
+| `-i <text>` | `--include` | Include only lines matching filter (repeatable)      |
+| `-e <text>` | `--exclude` | Exclude lines matching filter (repeatable)           |
 
 ### Input modes
 
@@ -30,7 +30,7 @@ gtlogj -c <config> [options] [file]
 # Read a file (positional argument)
 gtlogj -c app.conf app.log
 
-# Tail a file (positional argument)
+# Tail a file — shows only NEW lines appended after start
 gtlogj -c app.conf -t app.log
 
 # Read from stdin (no file argument)
@@ -42,48 +42,70 @@ tail -f app.log | gtlogj -c app.conf -p timed
 
 ## Configuration file
 
-The config file uses an INI-like format with one or more `[folders]` sections.
+The config file uses an INI-like format. Comments start with `;`.
 
-### Folder matching
-
-When `gtlogj` starts it compares the **current working directory** against the `paths` listed in each `[folders]` section (case-insensitive). The first match wins. A section with no `paths` key is used as the fallback default.
-
-### Per-section settings
-
-| Key | Default | Description |
-|-----|---------|-------------|
-| `paths` | *(none)* | Comma-separated directory paths this section applies to |
-| `output` | `[{level}] {timestamp}: {message}` | Output format string |
-| `timestamp` | `ts` | JSON key for the timestamp field |
-| `level` | `level` | JSON key for the log level field |
-| `message` | `message` | JSON key for the message field |
-| `thread` | `thread` | JSON key for the thread field |
-| `logger` | `logger` | JSON key for the logger field |
-| `trace` | `trace` | JSON key for the stack trace field |
-
-### Profiles
-
-Each `[folders]` section can have named sub-profiles (`[profile.<name>]`) that override individual settings. Select a profile with `-p <name>`.
-
-### Example config
+### Structure
 
 ```ini
 [folders]
-paths = /home/user/myapp, /srv/logs
-timestamp = @timestamp
-level = level
-message = message
-output = [{level}] {timestamp}: {message}
+paths   = /path/one, /path/two   ; directories this section applies to
+output  = {timestamp} [{level}]: {message}
 
-[profile.timed]
-output = {timestamp:datetime} [{level}]: {message}
-
-[profile.verbose]
-output = {timestamp:datetime} [{level}] ({logger}): {message}
+[profile.myprofile]
+output  = {timestamp:datetime} [{level}]: {message}
 
 [folders]
-; fallback — matches any directory
-output = [{level}] {timestamp}: {message}
+; second [folders] section with no paths = fallback for any directory
+output  = [{level}] {timestamp}: {message}
+```
+
+A config file can have **multiple `[folders]` sections**.
+
+- **File mode**: `gtlogj` resolves the **parent directory of the log file** and matches it against each section's `paths` list (prefix match, case-insensitive). The first match wins. A section with no `paths` key acts as the fallback/default.
+- **Stdin mode**: no file path is available, so the **first `[folders]` section** is used unconditionally. Place your most general section first if you use stdin regularly.
+
+Each `[folders]` section can contain **`[profile.<name>]`** sub-sections that override specific settings. Select a profile at runtime with `-p <name>`.
+
+### `[folders]` keys
+
+| Key        | Default                          | Description                                            |
+|------------|----------------------------------|--------------------------------------------------------|
+| `paths`    | *(none — fallback)*              | Comma-separated directory prefixes to match            |
+| `output`   | `{level} {timestamp} {message}`  | Output format string (see Placeholders below)          |
+| `timestamp`| `ts`                             | JSON key for the timestamp field                       |
+| `level`    | `level`                          | JSON key for the log level field                       |
+| `message`  | `message`                        | JSON key for the log message field                     |
+| `thread`   | `thread`                         | JSON key for the thread field                          |
+| `logger`   | `logger`                         | JSON key for the logger name field                     |
+| `trace`    | `trace`                          | JSON key for the stack trace field                     |
+| `include`  | *(none)*                         | Comma-separated filters — only matching lines shown    |
+| `exclude`  | *(none)*                         | Comma-separated filters — matching lines are hidden    |
+
+### `[profile.<name>]` keys
+
+Profiles inherit all values from the parent `[folders]` section and can override any of the keys above (except `paths`).
+
+### Full example
+
+```ini
+[folders]
+paths     = /home/user/myapp, /srv/logs/myapp
+timestamp = @timestamp
+level     = level
+message   = message
+output    = [{level}] {timestamp}: {message}
+exclude   = healthcheck, ping
+
+[profile.timed]
+output    = {timestamp:datetime} [{level}]: {message}
+
+[profile.verbose]
+output    = {timestamp:datetime} [{level}] ({logger}): {message}
+include   = ERROR, WARN
+
+[folders]
+; fallback — used when CWD doesn't match any paths above
+output    = [{level}] {timestamp}: {message}
 ```
 
 ---
@@ -94,40 +116,68 @@ Use `{key}` in the `output` format string. Any JSON key can be used; missing key
 
 ### Predefined aliases
 
-| Placeholder | Value |
-|------------|-------|
-| `{timestamp}` | Configured timestamp key — raw value |
+The following aliases map to the JSON key configured in the matched `[folders]` section (or profile override):
+
+| Placeholder            | Resolves to                                          |
+|------------------------|------------------------------------------------------|
+| `{timestamp}`          | Configured timestamp key — raw value                 |
 | `{timestamp:datetime}` | Configured timestamp key — ISO `YYYY-MM-DD HH:MM:SS` |
-| `{level}` | Configured level key |
-| `{message}` | Configured message key |
-| `{thread}` | Configured thread key |
-| `{logger}` | Configured logger key |
-| `{trace}` | Configured trace key |
+| `{level}`              | Configured level key                                 |
+| `{message}`            | Configured message key                               |
+| `{thread}`             | Configured thread key                                |
+| `{logger}`             | Configured logger key                                |
+| `{trace}`              | Configured trace key                                 |
 
 ### Arbitrary JSON keys
 
-Any key from the log line can be referenced directly:
+Any key from the log line can be referenced directly by name:
 
 ```
 output = {timestamp} |{request_id}|{user_id}|: {message}
 ```
 
-If `request_id` or `user_id` is absent from a line, it is replaced with `""`.
+If a key is absent from a line it is replaced with `""`.
+
+---
+
+## Filtering
+
+Filters are simple substring matches (more filter types planned). A line must pass all active filters to be shown.
+
+- **Exclude takes precedence** over include.
+- Filters from `[folders]`, `[profile]`, and CLI flags (`-i`/`-e`) are **all merged**.
+
+```sh
+# Show only ERROR lines
+gtlogj -c app.conf app.log -i ERROR
+
+# Show everything except DEBUG
+gtlogj -c app.conf app.log -e DEBUG
+
+# Combine: only ERROR lines that don't contain "healthcheck"
+gtlogj -c app.conf app.log -i ERROR -e healthcheck
+```
 
 ---
 
 ## Examples
 
 ```sh
-# Default format using folder config
-gtlogj -c myapp.conf -f app.log
+# Default format
+gtlogj -c myapp.conf app.log
 
-# ISO timestamp profile
-gtlogj -c myapp.conf -f app.log -p timed
+# ISO timestamp using a profile
+gtlogj -c myapp.conf -p timed app.log
 
-# Pipe from another command
+# Tail live log with profile
+gtlogj -c myapp.conf -p timed -t app.log
+
+# Pipe from kubectl
 kubectl logs my-pod | gtlogj -c k8s.conf -p timed
 
-# Show raw valid JSON lines (useful for piping to jq)
-gtlogj -c myapp.conf -f app.log -r | jq .message
+# Output raw JSON lines for further processing
+gtlogj -c myapp.conf -r app.log | jq .message
+
+# Filter while tailing
+gtlogj -c myapp.conf -t app.log -i ERROR -e "connection reset"
 ```

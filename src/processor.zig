@@ -59,29 +59,35 @@ pub const Processor = struct {
         }
     }
 
-    /// Match the CWD against folder configs, apply profile overrides, and build filter lists.
+    /// Resolve folder config, apply profile overrides, and build filter lists.
     /// The returned LineContext owns the filter slices; call deinit when done.
     fn buildContext(self: *Processor) !LineContext {
-        // Folder config matching
-        var cwd_buf: [4096]u8 = undefined;
-        const cwd = std.fs.cwd().realpath(".", &cwd_buf) catch ".";
+        const cfg: *const config_mod.FolderConfig = if (self.args.file_path) |fp| blk: {
+            // File mode: resolve the log file's parent directory and match it against configured paths
+            var file_real_buf: [4096]u8 = undefined;
+            const file_real = std.fs.cwd().realpath(fp, &file_real_buf) catch fp;
+            const file_dir = std.fs.path.dirname(file_real) orelse file_real;
 
-        var matched_cfg: ?*const config_mod.FolderConfig = null;
-        for (self.config.folders.items) |*cfg| {
-            if (cfg.paths.len == 0) {
-                if (matched_cfg == null) matched_cfg = cfg;
-                continue;
-            }
-            for (cfg.paths) |path| {
-                if (cwd.len >= path.len and std.ascii.eqlIgnoreCase(cwd[0..path.len], path)) {
-                    matched_cfg = cfg;
-                    break;
+            var matched: ?*const config_mod.FolderConfig = null;
+            for (self.config.folders.items) |*f| {
+                if (f.paths.len == 0) {
+                    if (matched == null) matched = f; // first pathless section = fallback
+                    continue;
                 }
+                for (f.paths) |path| {
+                    if (file_dir.len >= path.len and std.ascii.eqlIgnoreCase(file_dir[0..path.len], path)) {
+                        matched = f;
+                        break;
+                    }
+                }
+                if (matched != null and matched.? == f) break;
             }
-            if (matched_cfg != null and matched_cfg.? == cfg) break;
-        }
-
-        const cfg = matched_cfg orelse return error.NoMatchingFolderConfig;
+            break :blk matched orelse return error.NoMatchingFolderConfig;
+        } else blk: {
+            // Stdin mode: no file path — use the first [folders] section unconditionally
+            if (self.config.folders.items.len == 0) return error.NoFolderConfigDefined;
+            break :blk &self.config.folders.items[0];
+        };
 
         // Key and format resolution (profile overrides folder defaults)
         var ts_key = cfg.timestamp_key;

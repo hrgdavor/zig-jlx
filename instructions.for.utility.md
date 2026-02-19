@@ -3,19 +3,20 @@ make this a commandline utility that can read log files that are text with each 
 - if parsing a line fails, ignore that line
 
 the utility called gtlogj should work by either:
-- reading a file (`-f path`)
-- reading stdin (when `-f` and `-t` are both omitted, read from stdin automatically)
+- reading a file (`-t path`)
+- reading stdin (when `-t` is omitted, read from stdin automatically)
 - tailing a file (`-t path` — shows only newly appended lines; uses raw read+sleep loop so new bytes are always detected)
 
 A positional (bare) path argument is also accepted as the file path (useful with `-t`).
 
 define a configuration file where options for what the utility does, how it displays results and input parameters.
 config file location will be provided as a param (-c --config). If -c is not provided, print usage help to stderr and exit with code 1.
+The help text must also include a sample config block (ready to copy-paste) so new users can start immediately.
 
 config file can have multiple sections called [folders] so each folders section can have its global configuration, and:
 -  each folders section can define multiple folder paths that it matches (comma-separated on the `paths` key)
-- folder matching compares the current working directory against configured paths, case-insensitively (important on Windows where drive letters differ in case)
-- a [folders] section with no `paths` key is used as the fallback/default
+- **file mode**: folder matching resolves the **parent directory of the log file** (real path) and compares it against configured paths, case-insensitively (important on Windows where drive letters differ in case); a [folders] section with no `paths` key is used as the fallback/default
+- **stdin mode**: no file path available — the **first [folders] section** is used unconditionally
 - each folders section also has subsections for additional configuration profiles (`[profile.<name>]`)
 - when utility is called, `-p / --profile` selects a profile inside the matched folder section
 

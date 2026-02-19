@@ -44,7 +44,7 @@ Command line parameters (implemented in `src/args.zig`):
 - `<file>` - positional argument; path to the input log file; if omitted, reads from **stdin**
 - `-t / --tail` - tail the file (the file path is the positional argument)
 - `-o / --output` - output file (default: stdout)
-- `-r / --raw` - output original line as-is, only for lines containing a valid JSON log entry (parsing/filtering is still performed to validate the line)
+- `-x / --passthrough` - output original line as-is, only for lines containing a valid JSON log entry (parsing/filtering is still performed to validate the line)
 - `-i / --include <filter>` - include only lines matching filter; repeatable; combined with config-defined include filters
 - `-e / --exclude <filter>` - exclude lines matching filter; repeatable; combined with config-defined exclude filters
 

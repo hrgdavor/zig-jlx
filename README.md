@@ -20,7 +20,7 @@ gtlogj -c <config> [options] [file]
 | `-t`        | `--tail`    | Tail the file — shows only newly appended lines      |
 | `-p <name>` | `--profile` | Profile name to use from the matched config section  |
 | `-o <path>` | `--output`  | Write output to a file (default: stdout)             |
-| `-r`        | `--raw`     | Echo original line as-is (only for valid JSON lines) |
+| `-x`        | `--passthrough` | Echo original line as-is (valid JSON lines only)     |
 | `-i <text>` | `--include` | Include only lines matching filter (repeatable)      |
 | `-e <text>` | `--exclude` | Exclude lines matching filter (repeatable)           |
 
@@ -176,7 +176,7 @@ gtlogj -c myapp.conf -p timed -t app.log
 kubectl logs my-pod | gtlogj -c k8s.conf -p timed
 
 # Output raw JSON lines for further processing
-gtlogj -c myapp.conf -r app.log | jq .message
+gtlogj -c myapp.conf -x app.log | jq .message
 
 # Filter while tailing
 gtlogj -c myapp.conf -t app.log -i ERROR -e "connection reset"

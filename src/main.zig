@@ -11,7 +11,7 @@ const HELP =
     \\  -t, --tail             Tail the file — shows only newly appended lines
     \\  -p, --profile <name>   Profile to use from config
     \\  -o, --output  <path>   Write output to file (default: stdout)
-    \\  -r, --raw              Echo original line as-is (valid JSON lines only)
+    \\  -x, --passthrough      Echo original line as-is (valid JSON lines only)
     \\  -i, --include <text>   Include only lines matching filter (repeatable)
     \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
     \\

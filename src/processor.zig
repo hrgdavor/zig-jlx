@@ -180,7 +180,7 @@ pub const Processor = struct {
         var entry = entry_const;
         defer entry.deinit(self.allocator);
 
-        if (self.args.raw) {
+        if (self.args.passthrough) {
             if (!filter_mod.passesFilter(line, ctx.include, ctx.exclude)) return;
             try writer.writeAll(line);
             try writer.writeAll("\n");

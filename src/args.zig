@@ -6,7 +6,7 @@ pub const Args = struct {
     file_path: ?[]const u8 = null,
     tail: bool = false,
     output_path: ?[]const u8 = null,
-    raw: bool = false,
+    passthrough: bool = false,
     /// Raw filter strings from -i / --include flags
     include_filters: std.ArrayListUnmanaged([]const u8) = .{},
     /// Raw filter strings from -e / --exclude flags
@@ -29,8 +29,8 @@ pub const Args = struct {
                 args.tail = true;
             } else if (std.mem.eql(u8, arg, "-o") or std.mem.eql(u8, arg, "--output")) {
                 args.output_path = try allocator.dupe(u8, process_args.next() orelse return error.NoOutputPath);
-            } else if (std.mem.eql(u8, arg, "-r") or std.mem.eql(u8, arg, "--raw")) {
-                args.raw = true;
+            } else if (std.mem.eql(u8, arg, "-x") or std.mem.eql(u8, arg, "--passthrough")) {
+                args.passthrough = true;
             } else if (std.mem.eql(u8, arg, "-i") or std.mem.eql(u8, arg, "--include")) {
                 const val = try allocator.dupe(u8, process_args.next() orelse return error.NoIncludeFilter);
                 try args.include_filters.append(allocator, val);

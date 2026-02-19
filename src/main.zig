@@ -6,7 +6,7 @@ const processor_mod = @import("processor.zig");
 const HELP =
     \\Usage: gtlogj -c <config> [options] [file]
     \\
-    \\  -c, --config  <path>   Config file (required)
+    \\  -c, --config  <path>   Config file (required for most commands)
     \\  [file]                 Input log file (reads stdin if omitted)
     \\  -t, --tail             Tail the file — shows only newly appended lines
     \\  -p, --profile <name>   Profile to use from config
@@ -16,7 +16,9 @@ const HELP =
     \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
     \\  -r, --range   <range>  Filter by time/date range (e.g. "08:00..09:30")
     \\  -z, --zone    <zone>   Timezone offset for range and datetime display (e.g. +01:00)
-    \\  -v, --values  <spec>   Collect unique values for a key (prefix:key)
+    \\  -v, --values  <spec>   Collect unique values for a key ([prefix:]key)
+    \\                         Prefixes: datetime, time, timems, line
+    \\      --keys           Collect and list all unique keys (standalone option)
     \\
     \\When no file is given, gtlogj reads from stdin.
     \\
@@ -31,6 +33,9 @@ const HELP =
     \\
     \\[profile.timed]
     \\output    = {timestamp:datetime} [{level}]: {message}
+    \\
+    \\[profile.time]
+    \\output    = {timestamp:timems} [{level}]: {message}
     \\
     \\[folders]
     \\; fallback — used when CWD doesn't match any paths above
@@ -47,7 +52,7 @@ pub fn main() !void {
     var args_copy = args;
     defer args_copy.deinit(allocator);
 
-    if (args.config_path == null) {
+    if (args.config_path == null and !args.keys) {
         const stderr = std.fs.File.stderr();
         try stderr.writeAll(HELP);
 

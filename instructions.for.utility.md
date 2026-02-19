@@ -26,6 +26,8 @@ Supported placeholders:
 - Both the alias (e.g., `{level}`) and the actual JSON key (e.g., `{severity}`) are supported.
 - If a placeholder key is not present in a specific log line, it is replaced with an empty string.
 - `{timestamp:datetime}` — special format for the configured timestamp key, outputs ISO format `YYYY-MM-DD HH:MM:SS`.
+- `{timestamp:time}` — outputs `HH:MM:SS`.
+- `{timestamp:timems}` — outputs `HH:MM:SS.mmm`.
 
 Folders and profiles define an `output` format string using these placeholders.
 Default output format: `[{level}] {timestamp}: {message}`
@@ -39,7 +41,7 @@ Placeholder details:
 - `{trace}` - maps to configured `trace` key (default `trace`).
 
 Command line parameters (implemented in `src/args.zig`):
-- `-c / --config` - config file location (**required**; utility prints help and exits with code 1 if omitted)
+- `-c / --config <path>` - path to configuration file (required for most commands, optional for `--keys`); utility prints help and exits with code 1 if omitted)
 - `-p / --profile` - profile to use from config file
 - `<file>` - positional argument; path to the input log file; if omitted, reads from **stdin**
 - `-t / --tail` - tail the file (the file path is the positional argument)
@@ -50,6 +52,7 @@ Command line parameters (implemented in `src/args.zig`):
 - `-r / --range <range>` - filter by time/date range (e.g. "08:00..09:30" or "2024-01-01 10:00..")
 - `-z / --zone <zone>` - timezone offset string (e.g. "+01:00", "-05:00", "UTC"); used for range matching and `{timestamp:datetime}` output
 - `-v / --values <spec>` - collect unique values for a key; format `[prefix:]key`; silences normal output; tracks first occurrence
+- `--keys` - collect and list all unique keys appearing in JSON log lines; silences normal output
 
 Filters can also be defined in the config file per folder section or profile:
 ```

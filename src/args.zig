@@ -17,6 +17,8 @@ pub const Args = struct {
     zone: ?[]const u8 = null,
     /// Value inspection string from -v / --values (e.g. "datetime:level")
     values: ?[]const u8 = null,
+    /// Collect and list all unique keys found in JSON lines
+    keys: bool = false,
 
     pub fn parse(allocator: std.mem.Allocator) !Args {
         var args = Args{};
@@ -49,6 +51,8 @@ pub const Args = struct {
                 args.zone = try allocator.dupe(u8, process_args.next() orelse return error.NoZoneValue);
             } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--values")) {
                 args.values = try allocator.dupe(u8, process_args.next() orelse return error.NoValuesValue);
+            } else if (std.mem.eql(u8, arg, "--keys")) {
+                args.keys = true;
             } else if (arg.len > 0 and arg[0] != '-') {
                 // Positional argument: treat as file path
                 if (args.file_path == null) {

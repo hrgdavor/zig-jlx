@@ -4,10 +4,17 @@ const config_mod = @import("config.zig");
 const parser_mod = @import("parser.zig");
 const filter_mod = @import("filter.zig");
 
+const DUMMY_CFG = config_mod.FolderConfig{
+    .paths = &[_][]const u8{},
+    .profiles = std.StringHashMap(config_mod.Profile).init(std.heap.page_allocator), // unused
+};
+
+const TimestampFormat = enum { datetime, time, timems };
+
 /// Everything resolved once per run: matched config, output format, key mappings, filters.
 const LineContext = struct {
     const ValuesConfig = struct {
-        prefix: enum { none, datetime, line },
+        prefix: enum { none, datetime, time, timems, line },
         key: []const u8,
     };
 
@@ -36,6 +43,8 @@ pub const Processor = struct {
     parser: parser_mod.Parser,
     /// Track seen values for the -v option.
     seen_values: std.StringHashMap(void),
+    /// Unique keys found during --keys run
+    all_found_keys: std.StringHashMap(void),
 
     pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: config_mod.Config) Processor {
         return .{
@@ -44,6 +53,7 @@ pub const Processor = struct {
             .config = config,
             .parser = parser_mod.Parser.init(allocator),
             .seen_values = std.StringHashMap(void).init(allocator),
+            .all_found_keys = std.StringHashMap(void).init(allocator),
         };
     }
 
@@ -59,6 +69,11 @@ pub const Processor = struct {
                 self.allocator.free(key.*);
             }
             self.seen_values.deinit();
+            var kit = self.all_found_keys.keyIterator();
+            while (kit.next()) |key| {
+                self.allocator.free(key.*);
+            }
+            self.all_found_keys.deinit();
         }
 
         if (self.args.file_path) |path| {
@@ -68,15 +83,46 @@ pub const Processor = struct {
             if (self.args.tail) {
                 try self.tailFile(file, stdout, &ctx);
             } else {
-                var read_buf: [8192]u8 = undefined;
-                var r = file.reader(&read_buf);
+                const read_buf = try self.allocator.alloc(u8, 1024 * 1024);
+                defer self.allocator.free(read_buf);
+                var r = file.reader(read_buf);
                 try self.processStream(&r.interface, stdout, &ctx);
             }
         } else {
             // No file specified — read from stdin
-            var stdin_buf: [1024]u8 = undefined;
-            var stdin_reader = std.fs.File.stdin().reader(&stdin_buf);
+            const stdin_buf = try self.allocator.alloc(u8, 1024 * 1024);
+            defer self.allocator.free(stdin_buf);
+            var stdin_reader = std.fs.File.stdin().reader(stdin_buf);
             try self.processStream(&stdin_reader.interface, stdout, &ctx);
+        }
+
+        if (self.args.keys) {
+            try self.reportDiscoveredKeys(stdout);
+        }
+    }
+
+    fn reportDiscoveredKeys(self: *Processor, stdout: std.fs.File) !void {
+        var keys_list: std.ArrayListUnmanaged([]const u8) = .{};
+        defer keys_list.deinit(self.allocator);
+
+        var it = self.all_found_keys.keyIterator();
+        while (it.next()) |k| {
+            try keys_list.append(self.allocator, k.*);
+        }
+
+        if (keys_list.items.len == 0) return;
+
+        std.mem.sort([]const u8, keys_list.items, {}, struct {
+            fn lessThan(_: void, a: []const u8, b: []const u8) bool {
+                return std.mem.lessThan(u8, a, b);
+            }
+        }.lessThan);
+
+        _ = try stdout.write("\nDiscovered keys:\n");
+        for (keys_list.items) |k| {
+            _ = try stdout.write("  ");
+            _ = try stdout.write(k);
+            _ = try stdout.write("\n");
         }
     }
 
@@ -103,10 +149,17 @@ pub const Processor = struct {
                 }
                 if (matched != null and matched.? == f) break;
             }
+            if (matched == null and self.args.keys) {
+                // If --keys is used, we can proceed without a folder match
+                break :blk &DUMMY_CFG;
+            }
             break :blk matched orelse return error.NoMatchingFolderConfig;
         } else blk: {
             // Stdin mode: no file path — use the first [folders] section unconditionally
-            if (self.config.folders.items.len == 0) return error.NoFolderConfigDefined;
+            if (self.config.folders.items.len == 0) {
+                if (self.args.keys) break :blk &DUMMY_CFG;
+                return error.NoFolderConfigDefined;
+            }
             break :blk &self.config.folders.items[0];
         };
 
@@ -157,6 +210,10 @@ pub const Processor = struct {
                 const key = vs[idx + 1 ..];
                 if (std.mem.eql(u8, prefix_str, "datetime")) {
                     values_config = .{ .prefix = .datetime, .key = key };
+                } else if (std.mem.eql(u8, prefix_str, "time")) {
+                    values_config = .{ .prefix = .time, .key = key };
+                } else if (std.mem.eql(u8, prefix_str, "timems")) {
+                    values_config = .{ .prefix = .timems, .key = key };
                 } else if (std.mem.eql(u8, prefix_str, "line")) {
                     values_config = .{ .prefix = .line, .key = key };
                 } else {
@@ -243,6 +300,17 @@ pub const Processor = struct {
             else return;
         }
 
+        if (self.args.keys) {
+            var it = entry.parsed.value.object.iterator();
+            while (it.next()) |kv| {
+                if (!self.all_found_keys.contains(kv.key_ptr.*)) {
+                    const k = try self.allocator.dupe(u8, kv.key_ptr.*);
+                    try self.all_found_keys.put(k, {});
+                }
+            }
+            return;
+        }
+
         if (self.args.passthrough) {
             if (!filter_mod.passesFilter(line, ctx.include, ctx.exclude)) return;
             // Value inspection overrides regular output
@@ -297,7 +365,27 @@ pub const Processor = struct {
             },
             .datetime => {
                 if (entry.timestamp) |ts| {
-                    const dt = try formatDatetime(self.allocator, ts, ctx.zone_offset_secs);
+                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .datetime);
+                    defer self.allocator.free(dt);
+                    try writer.writeAll(dt);
+                    try writer.writeAll(" ");
+                }
+                try writer.writeAll(val_str);
+                try writer.writeAll("\n");
+            },
+            .time => {
+                if (entry.timestamp) |ts| {
+                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .time);
+                    defer self.allocator.free(dt);
+                    try writer.writeAll(dt);
+                    try writer.writeAll(" ");
+                }
+                try writer.writeAll(val_str);
+                try writer.writeAll("\n");
+            },
+            .timems => {
+                if (entry.timestamp) |ts| {
+                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .timems);
                     defer self.allocator.free(dt);
                     try writer.writeAll(dt);
                     try writer.writeAll(" ");
@@ -371,9 +459,18 @@ pub const Processor = struct {
             var replacement: []const u8 = "";
             var free_replacement = false;
 
-            if (std.mem.eql(u8, key, "timestamp") and spec != null and std.mem.eql(u8, spec.?, "datetime")) {
+            if (std.mem.eql(u8, key, "timestamp") and spec != null) {
+                const fmt_type: TimestampFormat = if (std.mem.eql(u8, spec.?, "datetime"))
+                    .datetime
+                else if (std.mem.eql(u8, spec.?, "time"))
+                    .time
+                else if (std.mem.eql(u8, spec.?, "timems"))
+                    .timems
+                else
+                    continue; // unrecognized spec, fall through to regular key logic
+
                 if (entry.timestamp) |ts| {
-                    replacement = try formatDatetime(self.allocator, ts, zone_offset_secs);
+                    replacement = try formatTimestamp(self.allocator, ts, zone_offset_secs, fmt_type);
                     free_replacement = true;
                 }
             } else {
@@ -412,25 +509,43 @@ pub const Processor = struct {
         };
     }
 
-    fn formatDatetime(allocator: std.mem.Allocator, timestamp: i64, zone_offset_secs: i64) ![]const u8 {
-        var ts = timestamp;
-        if (ts > 10000000000) ts = @divTrunc(ts, 1000); // ms to s
-        ts += zone_offset_secs; // shift to local time for display
+    fn formatTimestamp(allocator: std.mem.Allocator, timestamp: i64, zone_offset_secs: i64, fmt: TimestampFormat) ![]const u8 {
+        const ms = @mod(timestamp, 1000);
+        const ts = @divTrunc(timestamp, 1000) + zone_offset_secs;
 
         const epoch_seconds = std.time.epoch.EpochSeconds{ .secs = @intCast(ts) };
-        const epoch_day = epoch_seconds.getEpochDay();
-        const year_day = epoch_day.calculateYearDay();
-        const month_day = year_day.calculateMonthDay();
         const day_seconds = epoch_seconds.getDaySeconds();
 
-        return try std.fmt.allocPrint(allocator, "{d:0>4}-{d:0>2}-{d:0>2} {d:0>2}:{d:0>2}:{d:0>2}", .{
-            year_day.year,
-            month_day.month.numeric(),
-            month_day.day_index + 1,
-            day_seconds.getHoursIntoDay(),
-            day_seconds.getMinutesIntoHour(),
-            day_seconds.getSecondsIntoMinute(),
-        });
+        switch (fmt) {
+            .datetime => {
+                const epoch_day = epoch_seconds.getEpochDay();
+                const year_day = epoch_day.calculateYearDay();
+                const month_day = year_day.calculateMonthDay();
+                return try std.fmt.allocPrint(allocator, "{d:0>4}-{d:0>2}-{d:0>2} {d:0>2}:{d:0>2}:{d:0>2}", .{
+                    year_day.year,
+                    month_day.month.numeric(),
+                    month_day.day_index + 1,
+                    day_seconds.getHoursIntoDay(),
+                    day_seconds.getMinutesIntoHour(),
+                    day_seconds.getSecondsIntoMinute(),
+                });
+            },
+            .time => {
+                return try std.fmt.allocPrint(allocator, "{d:0>2}:{d:0>2}:{d:0>2}", .{
+                    day_seconds.getHoursIntoDay(),
+                    day_seconds.getMinutesIntoHour(),
+                    day_seconds.getSecondsIntoMinute(),
+                });
+            },
+            .timems => {
+                return try std.fmt.allocPrint(allocator, "{d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}", .{
+                    day_seconds.getHoursIntoDay(),
+                    day_seconds.getMinutesIntoHour(),
+                    day_seconds.getSecondsIntoMinute(),
+                    @abs(ms),
+                });
+            },
+        }
     }
 
     fn replace(allocator: std.mem.Allocator, input: []const u8, needle: []const u8, replacement: []const u8) ![]const u8 {

@@ -26,6 +26,7 @@ gtlogj -c <config> [options] [file]
 | `-r <range>`| `--range`       | Filter by time/date range (e.g. "08:00..09:30")      |
 | `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
 | `-v <spec>` | `--values`      | Collect unique values for a key (prefix:key)         |
+|             | `--keys`        | Collect and list all unique JSON keys discovered     |
 
 ### Input modes
 
@@ -127,6 +128,8 @@ The following aliases map to the JSON key configured in the matched `[folders]` 
 |------------------------|------------------------------------------------------|
 | `{timestamp}`          | Configured timestamp key — raw value                 |
 | `{timestamp:datetime}` | Configured timestamp key — ISO `YYYY-MM-DD HH:MM:SS` |
+| `{timestamp:time}`     | Configured timestamp key — `HH:MM:SS`                |
+| `{timestamp:timems}`   | Configured timestamp key — `HH:MM:SS.mmm`            |
 | `{level}`              | Configured level key                                 |
 | `{message}`            | Configured message key                               |
 | `{thread}`             | Configured thread key                                |
@@ -226,6 +229,28 @@ gtlogj -v line:message app.log -i ERROR
 
 ---
 
+## Key Discovery
+
+The `--keys` flag scans JSON log entries and collects a unique list of all keys encountered. This is useful for exploring unknown log formats.
+
+> [!TIP]
+> **For large log files**, use `--keys` with `head` to scan just a sample:
+> ```sh
+> gtlogj -c test.conf --keys test.log | head -n 100
+> ```
+
+### Examples
+
+```sh
+# Discover all keys in a log file (no config required!)
+gtlogj --keys app.log
+
+# Also works with piped input
+cat app.log | gtlogj --keys
+```
+
+---
+
 ## Examples
 
 ### Testing with included assets
@@ -252,8 +277,11 @@ gtlogj -c test.conf test.log -i "User login" -v datetime:user_id
 ### General usage
 
 ```sh
-# Default format
+# Basic usage (requires a config file for most commands)
 gtlogj -c myapp.conf app.log
+
+# Command-line configuration requirement
+# The -c/--config flag is REQUIRED for all operations EXCEPT --keys.
 
 # ISO timestamp using a profile
 gtlogj -c myapp.conf -p timed app.log

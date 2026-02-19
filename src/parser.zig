@@ -22,7 +22,9 @@ pub const Parser = struct {
         const json_start = std.mem.indexOfScalar(u8, line, '{') orelse return null;
         const json_text = std.mem.trim(u8, line[json_start..], " \r\t");
 
-        const parsed = std.json.parseFromSlice(std.json.Value, self.allocator, json_text, .{}) catch return null;
+        const parsed = try std.json.parseFromSlice(std.json.Value, self.allocator, json_text, .{
+            .max_value_len = 1024 * 1024 * 16,
+        });
         errdefer parsed.deinit();
 
         const root = parsed.value;
@@ -44,14 +46,17 @@ pub const Parser = struct {
     }
 
     fn parseTimestamp(val: std.json.Value) ?i64 {
-        return switch (val) {
+        var ts: i64 = switch (val) {
             .integer => val.integer,
-            .float => @as(i64, @intFromFloat(val.float)),
-            .string => std.fmt.parseInt(i64, val.string, 10) catch {
-                // Try parsing as ISO string? For now just return null
-                return null;
-            },
-            else => null,
+            .float => @intFromFloat(val.float),
+            .string => std.fmt.parseInt(i64, val.string, 10) catch return null,
+            else => return null,
         };
+
+        // Normalize to milliseconds: if < 10 billion, it's likely seconds
+        if (ts != 0 and @abs(ts) < 10_000_000_000) {
+            ts *= 1000;
+        }
+        return ts;
     }
 };

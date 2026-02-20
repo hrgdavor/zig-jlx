@@ -86,16 +86,12 @@ pub const Filter = struct {
     }
 
     /// Match Phase 2: key-specific parsed JSON check
-    pub fn matchesParsed(self: *const Filter, parsed: std.json.Value) !bool {
+    pub fn matchesParsed(self: *const Filter, parsed: *const std.StringHashMap([]const u8)) !bool {
         return switch (self.filter_type) {
             .global_literal, .global_regex => true, // Already handled in phase 1 conceptually
             .key_literal, .key_regex => {
-                if (parsed != .object) return false;
-                if (parsed.object.get(self.key.?)) |val| {
-                    const val_str = switch (val) {
-                        .string => |s| s,
-                        else => return false, // Only string values are matched for now
-                    };
+                if (parsed.get(self.key.?)) |val| {
+                    const val_str = if (val.len >= 2 and val[0] == '"') val[1 .. val.len - 1] else val;
                     if (self.filter_type == .key_literal) {
                         return std.mem.indexOf(u8, val_str, self.text.?) != null;
                     } else {
@@ -143,7 +139,7 @@ pub fn passesRawIncludes(line: []const u8, include: []const Filter) !bool {
 }
 
 /// Phase 2: Check Parsed Excludes and evaluate final Include status
-pub fn passesParsed(line: []const u8, parsed: std.json.Value, include: []const Filter, exclude: []const Filter) !bool {
+pub fn passesParsed(line: []const u8, parsed: *const std.StringHashMap([]const u8), include: []const Filter, exclude: []const Filter) !bool {
     // 1. Check Key-specific Excludes
     for (exclude) |f| {
         if (f.filter_type == .key_literal or f.filter_type == .key_regex) {

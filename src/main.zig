@@ -5,24 +5,7 @@ const processor_mod = @import("processor.zig");
 
 const HELP =
     \\Usage: jlx -c <config> [options] [file]
-    \\
-    \\  -c, --config  <path>   Config file (required for most commands)
-    \\  [file]                 Input log file (reads stdin if omitted)
-    \\  -t, --tail             Tail the file — shows only newly appended lines
-    \\  -p, --profile <name>   Profile to use from config
-    \\  -o, --output  <path>   Write output to file (default: stdout)
-    \\  -x, --passthrough      Echo original line as-is (valid JSON lines only)
-    \\  -i, --include <text>   Include only lines matching filter (repeatable)
-    \\  -e, --exclude <text>   Exclude lines matching filter (repeatable)
-    \\  -r, --range   <range>  Filter by time/date range (e.g. "08:00..09:30")
-    \\  -z, --zone    <zone>   Timezone offset for range and datetime display (e.g. +01:00)
-    \\
-    \\  -v, --values  <spec>   Collect unique values for a key ([prefix:]key)
-    \\                          - Optional prefixes define output format along with the key
-    \\                          - Prefixes are: datetime, time, timems, line
-    \\
-    \\      --keys           Collect and list all unique keys (standalone option)
-    \\
+    \\Run `jlx --help` for a full list of options.
     \\When no file is given, jlx reads from stdin.
     \\
     \\--- Sample config (save as jlx.conf and edit paths/keys as needed) ---
@@ -51,10 +34,11 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const args = try args_mod.Args.parse(allocator);
+    var parse_arena = std.heap.ArenaAllocator.init(allocator);
+    defer parse_arena.deinit();
+    const parse_allocator = parse_arena.allocator();
 
-    var args_copy = args;
-    defer args_copy.deinit(allocator);
+    const args = try args_mod.Args.parse(parse_allocator);
 
     if (args.config_path == null and !args.keys) {
         const stderr = std.fs.File.stderr();
@@ -79,8 +63,7 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    var config = config_mod.Config.init(allocator);
-    defer config.deinit();
+    var config = config_mod.Config.init(parse_allocator);
 
     if (args.config_path) |path| {
         try config.load(path);

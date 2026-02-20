@@ -2,6 +2,8 @@
 
 A fast command-line utility for reading and formatting structured JSON log files. Or other text files where each line contains serialized json object.
 
+Reason for existence is to be able to write logs as JSON without sacrificing readability from shell. And then it gets even better as much more is within reach when log is structured.
+
 Each log line can be optionally be preceded by arbitrary text (the first `{` marks the start of JSON). Lines that are not contain valid JSON (starting at first `{` until end of line) are silently skipped.
 
 ---

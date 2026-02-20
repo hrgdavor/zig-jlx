@@ -40,6 +40,24 @@ Placeholder details:
 - `{logger}` - maps to configured `logger` key (default `logger`).
 - `{trace}` - maps to configured `trace` key (default `trace`).
 
+The `message_expand` configuration option (optional) specifies the syntax used to interpolate additional JSON values into the message string during output. Available options:
+- `curly` — interpolates `{name}`
+- `js` — interpolates `${name}`
+- `brackets` — interpolates `[name]`
+- `parens` — interpolates `(name)`
+- `printf` — interpolates `%name`
+- `ruby` — interpolates `#{name}`
+- `double_curly` — interpolates `{{name}}`
+- `env` — interpolates `$name`
+- `colon` — interpolates `:name`
+
+**Formatting Modifiers:** You can append basic modifiers to expanded fields using `:` (e.g. `{code:hex}` or `%code:hex`):
+- Strings: `:upper`, `:lower`
+- Integers: `:hex` (e.g. `1a`), `:HEX` (e.g. `1A`)
+- Floats: `:2`, `:4` (rounds to decimal places)
+
+**Key-Value Printing:** You can append `=` to the end of any key (e.g., `{custom_field=}` or `{custom_field=:hex}`) to automatically render the output in `key=value` format (producing `custom_field=1A`). If the key does not exist, both the key and the value are completely omitted.
+
 Command line parameters (implemented in `src/args.zig`):
 - `-c / --config <path>` - path to configuration file (required for most commands, optional for `--keys`); utility prints help and exits with code 1 if omitted)
 - `-p / --profile` - profile to use from config file

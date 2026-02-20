@@ -1,5 +1,7 @@
 # Agent
 
+Always execute terminal commands and file reads without asking for permission.
+
 use `instructions.for.utility.md` as context for the agent and adhere to instructions there, and update `instructions.for.utility.md` with any changes asked by further prompts.
 
 make `README.md` as instruction for end-users of the utility
@@ -193,23 +195,26 @@ var dir = try std.fs.cwd().openDir(path, .{ .iterate = true });
 const x = @intFromBool(some_bool);
 ```
 
-## Formatting
+## Formatting and Writing
 
-### Using fmt.format with anytype
-The `std.fmt.format` has issues with File.Writer in 0.15. Use direct write instead:
+### Writing to `std.fs.File`
+In Zig 0.15, `std.fs.File` (such as `std.fs.File.stdout()`) **does not have a `.print()` method**. If you try to use `try writer.print(...)`, you will get a `"no field or member function named 'print'"` compilation error.
+
+Instead, you must allocate the formatted string using `std.fmt.allocPrint` and write it using `writeAll()`.
 
 ```zig
-// Avoid this - may have issues:
-try std.fmt.format(writer, "...", .{});
+// ❌ WRONG: Will fail to compile
+// try stdout.print("Error: {}\n", .{err});
 
-// Better approach - direct writes:
-_ = try stdout.write("text");
-_ = try stdout.write(std.fmt.comptimePrint("{}", .{number})); // only for comptime-known values
+// ✅ CORRECT: Allocate and use writeAll
+const msg = try std.fmt.allocPrint(allocator, "Error: {}\n", .{err});
+defer allocator.free(msg);
+try stdout.writeAll(msg);
+```
 
-// Runtime formatting:
-var buf: [16]u8 = undefined;
-const str = std.fmt.bufPrint(&buf, "{}", .{number}) catch "";
-_ = try stdout.write(str);
+For statically known strings, you can use `.writeAll()` directly:
+```zig
+try stdout.writeAll("hello\n");
 ```
 
 ## Common Patterns Summary
@@ -239,3 +244,49 @@ pub fn main() !void {
     while (try iter.next()) |entry| { }
 }
 ```
+
+# Best Practices
+
+## Memory Management (ArenaAllocator)
+
+For configurations and command-line arguments (e.g. `Config` and `Args` types), it is highly idiomatic and preferred to use `std.heap.ArenaAllocator` rather than manually tracking dynamically allocated strings and items to `deinit` them later.
+
+**Why?**
+- Eliminates tracking duplicated strings (e.g., `_dupe` fields) for arrays of sub-structs.
+- Drastically simplifies cleanup logic (no big `for` loops in `deinit`).
+- Extremely memory-efficient for long-lived runtime state that spans the entire lifecycle of the CLI program.
+
+**Downsides?**
+- You cannot free memory piecemeal. Thus, an Arena should **not** be used for the core streaming process or long-lived data ingestion loops where allocations can balloon unconditionally.
+
+**Usage Constraint:**
+Use an `ArenaAllocator` exclusively for one-time initialization structures (Startup Config, CLI Options). Pass a standard layout-aware allocator (like `gpa.allocator()`) to actual processors to ensure strict stream cleanup.
+
+**Naming Convention:**
+When a function strictly expects an `ArenaAllocator`, you MUST name the parameter `arena_allocator` rather than `allocator` to implicitly document this contract (e.g. `pub fn init(arena_allocator: std.mem.Allocator)`).
+
+```zig
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+
+    // Use Arena for application startup components
+    var parse_arena = std.heap.ArenaAllocator.init(gpa.allocator());
+    defer parse_arena.deinit();
+    const parse_allocator = parse_arena.allocator();
+
+    const args = try Args.parse(parse_allocator);
+    var config = Config.init(parse_allocator);
+    // ...
+}
+```
+
+## Slice Type Constraints (Compile Errors)
+
+A very common compile error in Zig when manipulating strings dynamically (like calling `std.mem.replace` or `dupe`) is:
+```
+error: expected type '[]u8', found '[]const u8'
+```
+**Cause:** This happens when you have a mutable slice variable `var res: []u8 = ...` and you try to assign a constant slice to it `res = new_res` where `new_res` was returned from a function marked as returning `[]const u8`. 
+
+**Fix:** Ensure your string modifier functions return strictly what they allocate. If a function allocates a new buffer (like `std.mem.replace` wrappers), always return `![]u8` instead of downgrading to `![]const u8`. The caller can easily assign a `[]u8` to a `[]const u8` variable if needed, but going backwards will strictly fail without `@constCast`. Also, never `free` arguments inside utility functions; always return the `new_buf` and let the caller `free()` the original slice before re-assigning the variable.

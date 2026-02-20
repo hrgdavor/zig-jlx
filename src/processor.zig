@@ -21,6 +21,7 @@ const LineContext = struct {
     cfg: *const config_mod.FolderConfig,
     ts_key: []const u8,
     out_fmt: []const u8,
+    message_expand_fn: ?*const fn (*Processor, []const u8, std.json.Value) anyerror![]const u8,
     include: []const filter_mod.Filter,
     exclude: []const filter_mod.Filter,
     /// Optional time/date range filter (from -r flag)
@@ -168,11 +169,36 @@ pub const Processor = struct {
         // Key and format resolution (profile overrides folder defaults)
         var ts_key = cfg.timestamp_key;
         var out_fmt = cfg.output_format;
+        var msg_expand = cfg.message_expand;
 
         if (self.args.profile) |pname| {
             if (cfg.profiles.get(pname)) |p| {
                 if (p.output_format) |o| out_fmt = o;
                 if (p.timestamp_key) |o| ts_key = o;
+                if (p.message_expand) |e| msg_expand = e;
+            }
+        }
+
+        var msg_expand_fn: ?*const fn (*Processor, []const u8, std.json.Value) anyerror![]const u8 = null;
+        if (msg_expand) |syntax| {
+            if (std.mem.eql(u8, syntax, "curly")) {
+                msg_expand_fn = Processor.expandCurly;
+            } else if (std.mem.eql(u8, syntax, "js")) {
+                msg_expand_fn = Processor.expandJs;
+            } else if (std.mem.eql(u8, syntax, "brackets")) {
+                msg_expand_fn = Processor.expandBrackets;
+            } else if (std.mem.eql(u8, syntax, "parens")) {
+                msg_expand_fn = Processor.expandParens;
+            } else if (std.mem.eql(u8, syntax, "printf")) {
+                msg_expand_fn = Processor.expandPrintf;
+            } else if (std.mem.eql(u8, syntax, "ruby")) {
+                msg_expand_fn = Processor.expandRuby;
+            } else if (std.mem.eql(u8, syntax, "double_curly")) {
+                msg_expand_fn = Processor.expandDoubleCurly;
+            } else if (std.mem.eql(u8, syntax, "env")) {
+                msg_expand_fn = Processor.expandEnv;
+            } else if (std.mem.eql(u8, syntax, "colon")) {
+                msg_expand_fn = Processor.expandColon;
             }
         }
 
@@ -231,6 +257,7 @@ pub const Processor = struct {
             .cfg = cfg,
             .ts_key = ts_key,
             .out_fmt = out_fmt,
+            .message_expand_fn = msg_expand_fn,
             .include = try include_list.toOwnedSlice(self.allocator),
             .exclude = try exclude_list.toOwnedSlice(self.allocator),
             .range_filter = range_filter,
@@ -337,19 +364,28 @@ pub const Processor = struct {
         // Phase 2 Filtering: Key-Specific JSON Check
         if (!try filter_mod.passesParsed(line, entry.parsed.value, ctx.include, ctx.exclude)) return;
 
-        const formatted = try self.formatEntry(&entry, ctx.out_fmt, ctx.cfg, ctx.zone_offset_secs);
-        defer self.allocator.free(@constCast(formatted));
+        if (self.formatEntry(&entry, ctx)) |formatted| {
+            defer self.allocator.free(@constCast(formatted));
 
-        // Value inspection overrides regular output
-        if (ctx.values_config) |vc| {
-            if (entry.parsed.value.object.get(vc.key)) |val| {
-                _ = try self.handleValue(val, formatted, &entry, ctx, writer);
+            // Value inspection overrides regular output
+            if (ctx.values_config) |vc| {
+                if (entry.parsed.value.object.get(vc.key)) |val| {
+                    _ = try self.handleValue(val, formatted, &entry, ctx, writer);
+                }
+                return;
             }
-            return;
-        }
 
-        try writer.writeAll(formatted);
-        try writer.writeAll("\n");
+            try writer.writeAll(formatted);
+            try writer.writeAll("\n");
+        } else |err| {
+            try writer.writeAll(line);
+            try writer.writeAll("\n");
+            if (self.args.verbose) {
+                const err_msg = try std.fmt.allocPrint(self.allocator, "[Formatting Error: {}]\n", .{err});
+                defer self.allocator.free(err_msg);
+                try writer.writeAll(err_msg);
+            }
+        }
     }
 
     fn handleValue(self: *Processor, val: std.json.Value, formatted: []const u8, entry: *const parser_mod.LogEntry, ctx: *const LineContext, writer: anytype) !bool {
@@ -413,9 +449,9 @@ pub const Processor = struct {
         return true;
     }
 
-    fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, format: []const u8, cfg: *const config_mod.FolderConfig, zone_offset_secs: i64) ![]const u8 {
-        var res: []const u8 = try self.allocator.dupe(u8, format);
-        errdefer self.allocator.free(@constCast(res));
+    fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, ctx: *const LineContext) ![]const u8 {
+        var res: []u8 = try self.allocator.dupe(u8, ctx.out_fmt);
+        errdefer self.allocator.free(res);
 
         var start: usize = 0;
         while (std.mem.indexOfScalarPos(u8, res, start, '{')) |open_idx| {
@@ -433,38 +469,46 @@ pub const Processor = struct {
                 spec = placeholder[colon_idx + 1 ..];
             }
 
+            var print_kv = false;
+            if (key.len > 0 and key[key.len - 1] == '=') {
+                print_kv = true;
+                key = key[0 .. key.len - 1];
+            }
+
             var actual_key: []const u8 = key;
             if (std.mem.eql(u8, key, "timestamp")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.timestamp_key orelse cfg.timestamp_key;
-                    break :p cfg.timestamp_key;
-                } else cfg.timestamp_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.timestamp_key orelse ctx.cfg.timestamp_key;
+                    break :p ctx.cfg.timestamp_key;
+                } else ctx.cfg.timestamp_key;
             } else if (std.mem.eql(u8, key, "level")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.level_key orelse cfg.level_key;
-                    break :p cfg.level_key;
-                } else cfg.level_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.level_key orelse ctx.cfg.level_key;
+                    break :p ctx.cfg.level_key;
+                } else ctx.cfg.level_key;
             } else if (std.mem.eql(u8, key, "message")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.message_key orelse cfg.message_key;
-                    break :p cfg.message_key;
-                } else cfg.message_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.message_key orelse ctx.cfg.message_key;
+                    break :p ctx.cfg.message_key;
+                } else ctx.cfg.message_key;
             } else if (std.mem.eql(u8, key, "thread")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.thread_key orelse cfg.thread_key;
-                    break :p cfg.thread_key;
-                } else cfg.thread_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.thread_key orelse ctx.cfg.thread_key;
+                    break :p ctx.cfg.thread_key;
+                } else ctx.cfg.thread_key;
             } else if (std.mem.eql(u8, key, "logger")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.logger_key orelse cfg.logger_key;
-                    break :p cfg.logger_key;
-                } else cfg.logger_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.logger_key orelse ctx.cfg.logger_key;
+                    break :p ctx.cfg.logger_key;
+                } else ctx.cfg.logger_key;
             } else if (std.mem.eql(u8, key, "trace")) {
                 actual_key = if (self.args.profile) |pn| p: {
-                    if (cfg.profiles.get(pn)) |prof| break :p prof.trace_key orelse cfg.trace_key;
-                    break :p cfg.trace_key;
-                } else cfg.trace_key;
+                    if (ctx.cfg.profiles.get(pn)) |prof| break :p prof.trace_key orelse ctx.cfg.trace_key;
+                    break :p ctx.cfg.trace_key;
+                } else ctx.cfg.trace_key;
             }
+
+            const is_message = std.mem.eql(u8, key, "message");
 
             var replacement: []const u8 = "";
             var free_replacement = false;
@@ -480,13 +524,20 @@ pub const Processor = struct {
                     continue; // unrecognized spec, fall through to regular key logic
 
                 if (entry.timestamp) |ts| {
-                    replacement = try formatTimestamp(self.allocator, ts, zone_offset_secs, fmt_type);
+                    replacement = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, fmt_type);
                     free_replacement = true;
                 }
             } else {
                 if (entry.parsed.value.object.get(actual_key)) |val| {
-                    replacement = try valueToString(self.allocator, val);
-                    free_replacement = true;
+                    if (is_message and ctx.message_expand_fn != null) {
+                        const raw_str = try valueToString(self.allocator, val);
+                        defer self.allocator.free(raw_str);
+                        replacement = try ctx.message_expand_fn.?(self, raw_str, entry.parsed.value);
+                        free_replacement = true;
+                    } else {
+                        replacement = try valueToString(self.allocator, val);
+                        free_replacement = true;
+                    }
                 } else if (!std.mem.eql(u8, actual_key, key)) {
                     if (entry.parsed.value.object.get(key)) |val| {
                         replacement = try valueToString(self.allocator, val);
@@ -495,17 +546,172 @@ pub const Processor = struct {
                 }
             }
 
+            if (print_kv and free_replacement) {
+                const formatted_kv = try std.fmt.allocPrint(self.allocator, "{s}={s}", .{ key, replacement });
+                self.allocator.free(replacement);
+                replacement = formatted_kv;
+            }
+
             // Dupe needle because replace() frees and re-allocates res
             const needle = try self.allocator.dupe(u8, res[open_idx .. close_idx + 1]);
             defer self.allocator.free(needle);
 
             const new_res = try replace(self.allocator, res, needle, replacement);
             if (free_replacement) self.allocator.free(replacement);
+            self.allocator.free(res);
             res = new_res;
             start = open_idx + replacement.len;
         }
 
         return res;
+    }
+
+    fn expandCurly(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "{", "}");
+    }
+
+    fn expandJs(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "${", "}");
+    }
+
+    fn expandBrackets(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "[", "]");
+    }
+
+    fn expandParens(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "(", ")");
+    }
+
+    fn expandRuby(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "#{", "}");
+    }
+
+    fn expandDoubleCurly(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandGeneric(message, parsed, "{{", "}}");
+    }
+
+    fn expandGeneric(self: *Processor, message: []const u8, parsed: std.json.Value, open_seq: []const u8, close_seq: []const u8) ![]const u8 {
+        var res = try self.allocator.dupe(u8, message);
+        errdefer self.allocator.free(res);
+
+        var start: usize = 0;
+        while (std.mem.indexOfPos(u8, res, start, open_seq)) |open_idx| {
+            if (std.mem.indexOfPos(u8, res, open_idx + open_seq.len, close_seq)) |close_idx| {
+                const raw_key = res[open_idx + open_seq.len .. close_idx];
+                var key = raw_key;
+                var spec: ?[]const u8 = null;
+                if (std.mem.indexOfScalar(u8, raw_key, ':')) |colon_idx| {
+                    key = raw_key[0..colon_idx];
+                    spec = raw_key[colon_idx + 1 ..];
+                }
+
+                if (parsed.object.get(key)) |val| {
+                    const replacement = try formatValue(self.allocator, val, spec);
+                    defer self.allocator.free(replacement);
+                    const needle = try self.allocator.dupe(u8, res[open_idx .. close_idx + close_seq.len]);
+                    defer self.allocator.free(needle);
+
+                    const new_res = try replace(self.allocator, res, needle, replacement);
+                    if (res.ptr != message.ptr) self.allocator.free(res);
+                    res = new_res;
+                    start = open_idx + replacement.len;
+                } else {
+                    start = close_idx + close_seq.len;
+                }
+            } else {
+                break;
+            }
+        }
+        return res;
+    }
+
+    fn expandPrintf(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandAlphanum(message, parsed, '%');
+    }
+
+    fn expandEnv(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandAlphanum(message, parsed, '$');
+    }
+
+    fn expandColon(self: *Processor, message: []const u8, parsed: std.json.Value) ![]const u8 {
+        return self.expandAlphanum(message, parsed, ':');
+    }
+
+    fn expandAlphanum(self: *Processor, message: []const u8, parsed: std.json.Value, leading_char: u8) ![]const u8 {
+        var res = try self.allocator.dupe(u8, message);
+        errdefer self.allocator.free(res);
+
+        var start: usize = 0;
+        while (std.mem.indexOfScalarPos(u8, res, start, leading_char)) |open_idx| {
+            var i: usize = open_idx + 1;
+            while (i < res.len) : (i += 1) {
+                const c = res[i];
+                if (!std.ascii.isAlphanumeric(c) and c != '_') break;
+            }
+            if (i > open_idx + 1) {
+                const key = res[open_idx + 1 .. i];
+                var end_idx = i;
+                var spec: ?[]const u8 = null;
+
+                if (i < res.len and res[i] == ':') {
+                    var j = i + 1;
+                    while (j < res.len) : (j += 1) {
+                        const c = res[j];
+                        if (!std.ascii.isAlphanumeric(c) and c != '_') break;
+                    }
+                    if (j > i + 1) {
+                        spec = res[i + 1 .. j];
+                        end_idx = j;
+                    }
+                }
+
+                if (parsed.object.get(key)) |val| {
+                    const replacement = try formatValue(self.allocator, val, spec);
+                    defer self.allocator.free(replacement);
+                    const needle = try self.allocator.dupe(u8, res[open_idx..end_idx]);
+                    defer self.allocator.free(needle);
+
+                    const new_res = try replace(self.allocator, res, needle, replacement);
+                    if (res.ptr != message.ptr) self.allocator.free(res);
+                    res = new_res;
+                    start = open_idx + replacement.len;
+                } else {
+                    start = i;
+                }
+            } else {
+                start = open_idx + 1;
+            }
+        }
+        return res;
+    }
+
+    fn formatValue(allocator: std.mem.Allocator, val: std.json.Value, spec: ?[]const u8) ![]const u8 {
+        if (spec) |s| {
+            switch (val) {
+                .integer => |n| {
+                    if (std.mem.eql(u8, s, "hex")) return std.fmt.allocPrint(allocator, "{x}", .{n});
+                    if (std.mem.eql(u8, s, "HEX")) return std.fmt.allocPrint(allocator, "{X}", .{n});
+                },
+                .float => |f| {
+                    if (std.mem.eql(u8, s, "2")) return std.fmt.allocPrint(allocator, "{d:.2}", .{f});
+                    if (std.mem.eql(u8, s, "4")) return std.fmt.allocPrint(allocator, "{d:.4}", .{f});
+                },
+                .string => |str| {
+                    if (std.mem.eql(u8, s, "upper")) {
+                        const up = try allocator.dupe(u8, str);
+                        for (up) |*c| c.* = std.ascii.toUpper(c.*);
+                        return up;
+                    }
+                    if (std.mem.eql(u8, s, "lower")) {
+                        const lw = try allocator.dupe(u8, str);
+                        for (lw) |*c| c.* = std.ascii.toLower(c.*);
+                        return lw;
+                    }
+                },
+                else => {},
+            }
+        }
+        return valueToString(allocator, val);
     }
 
     fn valueToString(allocator: std.mem.Allocator, val: std.json.Value) ![]const u8 {
@@ -558,9 +764,9 @@ pub const Processor = struct {
         }
     }
 
-    fn replace(allocator: std.mem.Allocator, input: []const u8, needle: []const u8, replacement: []const u8) ![]const u8 {
+    fn replace(allocator: std.mem.Allocator, input: []const u8, needle: []const u8, replacement: []const u8) ![]u8 {
         const count = std.mem.count(u8, input, needle);
-        if (count == 0) return input;
+        if (count == 0) return try allocator.dupe(u8, input);
 
         const new_len = if (replacement.len >= needle.len)
             input.len + (replacement.len - needle.len) * count
@@ -569,7 +775,6 @@ pub const Processor = struct {
         const new_buf = try allocator.alloc(u8, new_len);
         _ = std.mem.replace(u8, input, needle, replacement, new_buf);
 
-        allocator.free(input);
         return new_buf;
     }
 };

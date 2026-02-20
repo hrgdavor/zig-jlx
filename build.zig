@@ -34,6 +34,12 @@ pub fn build(b: *std.Build) void {
     });
     const mvzr_mod = mvzr_dep.module("mvzr");
 
+    const simargs_dep = b.dependency("simargs", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const simargs_mod = simargs_dep.module("simargs");
+
     const mod = b.addModule("zig_jlx", .{
         // The root source file is the "entry point" of this module. Users of
         // this module will only be able to access public declarations contained
@@ -47,6 +53,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .imports = &.{
             .{ .name = "mvzr", .module = mvzr_mod },
+            .{ .name = "simargs", .module = simargs_mod },
         },
     });
 
@@ -89,6 +96,7 @@ pub fn build(b: *std.Build) void {
                 // importing modules from different packages).
                 .{ .name = "zig_jlx", .module = mod },
                 .{ .name = "mvzr", .module = mvzr_mod },
+                .{ .name = "simargs", .module = simargs_mod },
             },
         }),
     });

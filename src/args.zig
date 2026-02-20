@@ -19,62 +19,88 @@ pub const Args = struct {
     values: ?[]const u8 = null,
     /// Collect and list all unique keys found in JSON lines
     keys: bool = false,
+    verbose: bool = false,
 
-    pub fn parse(allocator: std.mem.Allocator) !Args {
+    pub const SimArgsConfig = struct {
+        config: ?[]const u8 = null,
+        profile: ?[]const u8 = null,
+        tail: bool = false,
+        output: ?[]const u8 = null,
+        passthrough: bool = false,
+        include: ?[]const u8 = null,
+        exclude: ?[]const u8 = null,
+        range: ?[]const u8 = null,
+        zone: ?[]const u8 = null,
+        values: ?[]const u8 = null,
+        keys: bool = false,
+        verbose: bool = false,
+        help: bool = false,
+
+        pub const __shorts__ = .{
+            .config = .c,
+            .profile = .p,
+            .tail = .t,
+            .output = .o,
+            .passthrough = .x,
+            .include = .i,
+            .exclude = .e,
+            .range = .r,
+            .zone = .z,
+            .values = .v,
+            .help = .h,
+        };
+
+        pub const __messages__ = .{
+            .config = "Config file (required for most commands)",
+            .profile = "Profile to use from config",
+            .tail = "Tail the file — shows only newly appended lines",
+            .output = "Write output to file (default: stdout)",
+            .passthrough = "Echo original line as-is (valid JSON lines only)",
+            .include = "Include only lines matching filter",
+            .exclude = "Exclude lines matching filter",
+            .range = "Filter by time/date range",
+            .zone = "Timezone offset for range and datetime display",
+            .values = "Collect unique values for a key ([prefix:]key)",
+            .keys = "Collect and list all unique keys (standalone)",
+            .verbose = "Print errors when output formatting fails",
+            .help = "Print this help message and exit",
+        };
+    };
+
+    /// Parses command-line arguments.
+    /// Uses the provided allocator natively. It's highly recommended to use an
+    /// `ArenaAllocator` since `Args` does not track or free individual duplicate
+    /// strings or arrays once they are created.
+    pub fn parse(arena_allocator: std.mem.Allocator) !Args {
+        const simargs = @import("simargs");
+        var simargs_parsed = try simargs.parse(arena_allocator, SimArgsConfig, "[file]", "0.1.0");
+        defer simargs_parsed.deinit();
+
         var args = Args{};
-        var process_args = try std.process.argsWithAllocator(allocator);
-        defer process_args.deinit();
 
-        // Skip executable name
-        _ = process_args.next();
+        if (simargs_parsed.args.config) |c| args.config_path = try arena_allocator.dupe(u8, c);
+        if (simargs_parsed.args.profile) |p| args.profile = try arena_allocator.dupe(u8, p);
+        if (simargs_parsed.args.output) |o| args.output_path = try arena_allocator.dupe(u8, o);
+        args.tail = simargs_parsed.args.tail;
+        args.passthrough = simargs_parsed.args.passthrough;
+        args.keys = simargs_parsed.args.keys;
+        args.verbose = simargs_parsed.args.verbose;
 
-        while (process_args.next()) |arg| {
-            if (std.mem.eql(u8, arg, "-c") or std.mem.eql(u8, arg, "--config")) {
-                args.config_path = try allocator.dupe(u8, process_args.next() orelse return error.NoConfigPath);
-            } else if (std.mem.eql(u8, arg, "-p") or std.mem.eql(u8, arg, "--profile")) {
-                args.profile = try allocator.dupe(u8, process_args.next() orelse return error.NoProfile);
-            } else if (std.mem.eql(u8, arg, "-t") or std.mem.eql(u8, arg, "--tail")) {
-                args.tail = true;
-            } else if (std.mem.eql(u8, arg, "-o") or std.mem.eql(u8, arg, "--output")) {
-                args.output_path = try allocator.dupe(u8, process_args.next() orelse return error.NoOutputPath);
-            } else if (std.mem.eql(u8, arg, "-x") or std.mem.eql(u8, arg, "--passthrough")) {
-                args.passthrough = true;
-            } else if (std.mem.eql(u8, arg, "-i") or std.mem.eql(u8, arg, "--include")) {
-                const val = try allocator.dupe(u8, process_args.next() orelse return error.NoIncludeFilter);
-                try args.include_filters.append(allocator, val);
-            } else if (std.mem.eql(u8, arg, "-e") or std.mem.eql(u8, arg, "--exclude")) {
-                const val = try allocator.dupe(u8, process_args.next() orelse return error.NoExcludeFilter);
-                try args.exclude_filters.append(allocator, val);
-            } else if (std.mem.eql(u8, arg, "-r") or std.mem.eql(u8, arg, "--range")) {
-                args.range = try allocator.dupe(u8, process_args.next() orelse return error.NoRangeValue);
-            } else if (std.mem.eql(u8, arg, "-z") or std.mem.eql(u8, arg, "--zone")) {
-                args.zone = try allocator.dupe(u8, process_args.next() orelse return error.NoZoneValue);
-            } else if (std.mem.eql(u8, arg, "-v") or std.mem.eql(u8, arg, "--values")) {
-                args.values = try allocator.dupe(u8, process_args.next() orelse return error.NoValuesValue);
-            } else if (std.mem.eql(u8, arg, "--keys")) {
-                args.keys = true;
-            } else if (arg.len > 0 and arg[0] != '-') {
-                // Positional argument: treat as file path
-                if (args.file_path == null) {
-                    args.file_path = try allocator.dupe(u8, arg);
-                }
-            }
+        if (simargs_parsed.args.include) |i| {
+            try args.include_filters.append(arena_allocator, try arena_allocator.dupe(u8, i));
+        }
+        if (simargs_parsed.args.exclude) |e| {
+            try args.exclude_filters.append(arena_allocator, try arena_allocator.dupe(u8, e));
+        }
+
+        if (simargs_parsed.args.range) |r| args.range = try arena_allocator.dupe(u8, r);
+        if (simargs_parsed.args.zone) |z| args.zone = try arena_allocator.dupe(u8, z);
+        if (simargs_parsed.args.values) |v| args.values = try arena_allocator.dupe(u8, v);
+
+        if (simargs_parsed.positional_args.len > 0) {
+            args.file_path = try arena_allocator.dupe(u8, simargs_parsed.positional_args[0]);
         }
 
         return args;
-    }
-
-    pub fn deinit(self: *Args, allocator: std.mem.Allocator) void {
-        if (self.config_path) |p| allocator.free(p);
-        if (self.profile) |p| allocator.free(p);
-        if (self.file_path) |p| allocator.free(p);
-        if (self.output_path) |p| allocator.free(p);
-        for (self.include_filters.items) |s| allocator.free(s);
-        self.include_filters.deinit(allocator);
-        for (self.exclude_filters.items) |s| allocator.free(s);
-        self.exclude_filters.deinit(allocator);
-        if (self.range) |p| allocator.free(p);
-        if (self.zone) |p| allocator.free(p);
-        if (self.values) |p| allocator.free(p);
     }
 };

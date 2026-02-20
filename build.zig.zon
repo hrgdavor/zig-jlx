@@ -36,6 +36,10 @@
             .url = "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.tar.gz",
             .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
         },
+        .simargs = .{
+            .url = "git+https://github.com/jiacai2050/zigcli#67a06e34cbe25a39bb86e35796cc5a0ca45a31f7",
+            .hash = "zigcli-0.3.1-ORC7jBfPAgCnJGpRG8NmsDjsjwhe4oL3fwKLCh-HRw6j",
+        },
     },
     .paths = .{
         "build.zig",

@@ -324,3 +324,25 @@ jlx -c myapp.conf -x app.log | jq .message
 # Filter while tailing
 jlx -c myapp.conf -t app.log -i ERROR -e "connection reset"
 ```
+
+---
+
+## Performance & Architecture
+
+`jlx` is designed for high-performance log processing, employing several memory and allocation optimizations to minimize overhead:
+
+### Dynamic Block Buffering (1MB - 16MB)
+Instead of traditionally allocating memory for each line being read, `jlx` utilizes a single, reusable `1MB` block buffer. The file stream is bulk-read directly into this buffer. 
+Lines are scanned in-place by simply hunting for the `\n` character. Incomplete lines at the end of the buffer are intelligently shifted (using `std.mem.copyForwards`) to the start, and the buffer resumes filling natively.
+
+This approach guarantees zero file-reading allocations for any line under 1MB. If reading encounters a massive log entry, the buffer dynamically doubles up to a hard cap of `16MB`. If a line exceeds 16MB without a newline, `jlx` intercepts it, prints a warning (in verbose mode), and safely skips to the next newline to prevent Out-Of-Memory (OOM) crashes.
+
+### Zero-Allocation JSON Parser
+The custom JSON parser avoids generating an Abstract Syntax Tree (AST) or copying strings into a new memory location. It simply outputs a `std.StringHashMap` that references exact `[]const u8` slices straight from the `1MB` static reading buffer. 
+
+### Line-Scoped Arena Allocator
+Formatting log output to the terminal requires dynamic string morphing, duplication, substitutions, and replacements (e.g., dynamically substituting `{level}` and `{timestamp}` from templates).
+Running standard heap allocators to allocate and free these strings per line, millions of times, degrades performance.
+
+To achieve near-zero string cleanup overhead in the hot path, `jlx` wraps the line expansion functionality in a **Line-Scoped Arena Allocator** (`std.heap.ArenaAllocator`). 
+At the start of processing a log line, the arena provides memory for parsed items and format templates. At the end of the line, instead of individually freeing dozens of string permutations, `jlx` instantly resets the arena (`arena.reset(.retain_capacity)`). This allows memory to be inherently pooled and reused for the next line without any continuous malloc overhead.

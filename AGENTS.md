@@ -281,6 +281,44 @@ pub fn main() !void {
 }
 ```
 
+## Line-Scoped Arena (High-Performance IO Processing)
+
+For iterating heavily over high-volume data streams (such as logs, network requests, loop processors), you should allocate a loop-scoped `ArenaAllocator` strictly initialized *before* the loop.
+
+**Why?**
+- Prevents millions of sequential `.alloc()` and `.free()` calls for line parsing or template duplicating.
+- Drastically improves performance by pooling memory per iteration.
+
+**Usage Constraint:**
+- `arena.reset(.retain_capacity)` MUST be strategically called per iteration block once context processing guarantees cleanup safety. 
+- You MUST pass `arena.allocator()` to internal business functions instead of standard or global allocators, ensuring any internally allocated arrays or structs get instantaneously cleared.
+
+```zig
+var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
+defer arena_instance.deinit();
+const arena = arena_instance.allocator();
+
+while (true) {
+    while (std.mem.indexOfScalarPos(u8, buf[0..write_pos], read_pos, '\n')) |nl_offset| {
+        // Drop all memory from the PREVIOUS line iteration instantly:
+        _ = arena_instance.reset(.retain_capacity); 
+        
+        var line = buf[read_pos..nl_offset];
+        try processFunction(arena, line); // Pass arena to children
+        
+        read_pos = nl_offset + 1;
+    }
+}
+```
+
+## Buffer Pre-Allocation & Shifting (No Readers)
+
+When dealing with high-throughput file streams in `std.fs.File`, standard `takeDelimiter` reader APIs allocate continuously per delimited chunk. Instead, favor bulk buffered binary slicing combined with shifting.
+
+- **Allocate Fixed Buffer First**: Pre-allocate an array or strictly bounded 1MB chunk: `var buf = try allocator.alloc(u8, 1024 * 1024);`.
+- **Bulk Read directly**: Call `file.read()` directly into the buffer offset `buf[write_pos..]`.
+- **Shift & Recover**: After finding an incomplete line chunk bounded at the end of the buffer, intelligently use `std.mem.copyForwards` to drop the read bytes, sliding the remainder sequence gracefully to index `0` so `read()` can fill the rest natively without reallocating buffers.
+
 ## Slice Type Constraints (Compile Errors)
 
 A very common compile error in Zig when manipulating strings dynamically (like calling `std.mem.replace` or `dupe`) is:

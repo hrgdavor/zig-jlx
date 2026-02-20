@@ -21,7 +21,7 @@ const LineContext = struct {
     cfg: *const config_mod.FolderConfig,
     ts_key: []const u8,
     out_fmt: []const u8,
-    message_expand_fn: ?*const fn (*Processor, []const u8, *const std.StringHashMap([]const u8)) anyerror![]const u8,
+    message_expand_fn: ?*const fn (*Processor, std.mem.Allocator, []const u8, *const std.StringHashMap([]const u8)) anyerror![]const u8,
     include: []const filter_mod.Filter,
     exclude: []const filter_mod.Filter,
     /// Optional time/date range filter (from -r flag)
@@ -43,7 +43,6 @@ pub const Processor = struct {
     allocator: std.mem.Allocator,
     args: args_mod.Args,
     config: config_mod.Config,
-    parser: parser_mod.Parser,
     /// Track seen values for the -v option.
     seen_values: std.StringHashMap(void),
     /// Unique keys found during --keys run
@@ -54,7 +53,6 @@ pub const Processor = struct {
             .allocator = allocator,
             .args = args,
             .config = config,
-            .parser = parser_mod.Parser.init(allocator),
             .seen_values = std.StringHashMap(void).init(allocator),
             .all_found_keys = std.StringHashMap(void).init(allocator),
         };
@@ -86,17 +84,11 @@ pub const Processor = struct {
             if (self.args.tail) {
                 try self.tailFile(file, stdout, &ctx);
             } else {
-                const read_buf = try self.allocator.alloc(u8, 1024 * 1024);
-                defer self.allocator.free(read_buf);
-                var r = file.reader(read_buf);
-                try self.processStream(&r.interface, stdout, &ctx);
+                try self.processStream(file, stdout, &ctx);
             }
         } else {
             // No file specified — read from stdin
-            const stdin_buf = try self.allocator.alloc(u8, 1024 * 1024);
-            defer self.allocator.free(stdin_buf);
-            var stdin_reader = std.fs.File.stdin().reader(stdin_buf);
-            try self.processStream(&stdin_reader.interface, stdout, &ctx);
+            try self.processStream(std.fs.File.stdin(), stdout, &ctx);
         }
 
         if (self.args.keys) {
@@ -179,7 +171,7 @@ pub const Processor = struct {
             }
         }
 
-        var msg_expand_fn: ?*const fn (*Processor, []const u8, *const std.StringHashMap([]const u8)) anyerror![]const u8 = null;
+        var msg_expand_fn: ?*const fn (*Processor, std.mem.Allocator, []const u8, *const std.StringHashMap([]const u8)) anyerror![]const u8 = null;
         if (msg_expand) |syntax| {
             if (std.mem.eql(u8, syntax, "curly")) {
                 msg_expand_fn = Processor.expandCurly;
@@ -266,62 +258,181 @@ pub const Processor = struct {
         };
     }
 
-    fn processStream(self: *Processor, reader: *std.io.Reader, writer: anytype, ctx: *const LineContext) !void {
+    fn processStream(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext) !void {
+        var buf = try self.allocator.alloc(u8, 1024 * 1024);
+        defer self.allocator.free(buf);
+
+        var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena_instance.deinit();
+        const arena = arena_instance.allocator();
+
+        var read_pos: usize = 0;
+        var write_pos: usize = 0;
+        var eof = false;
+
         while (true) {
-            var line = (try reader.takeDelimiter('\n')) orelse break;
-            if (line.len > 0 and line[line.len - 1] == '\r') {
-                line = line[0 .. line.len - 1];
+            while (std.mem.indexOfScalarPos(u8, buf[0..write_pos], read_pos, '\n')) |nl_offset| {
+                _ = arena_instance.reset(.retain_capacity);
+                var line = buf[read_pos..nl_offset];
+                if (line.len > 0 and line[line.len - 1] == '\r') {
+                    line = line[0 .. line.len - 1];
+                }
+                try self.processLine(arena, line, writer, ctx);
+                read_pos = nl_offset + 1;
             }
-            try self.processLine(line, writer, ctx);
+
+            if (eof) {
+                if (read_pos < write_pos) {
+                    _ = arena_instance.reset(.retain_capacity);
+                    var line = buf[read_pos..write_pos];
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    try self.processLine(arena, line, writer, ctx);
+                }
+                break;
+            }
+
+            const unread_len = write_pos - read_pos;
+            if (read_pos > 0 and unread_len > 0) {
+                std.mem.copyForwards(u8, buf[0..unread_len], buf[read_pos..write_pos]);
+                read_pos = 0;
+                write_pos = unread_len;
+            } else if (read_pos > 0) {
+                read_pos = 0;
+                write_pos = 0;
+            }
+
+            if (write_pos == buf.len) {
+                const max_buf_size = 16 * 1024 * 1024;
+                if (buf.len >= max_buf_size) {
+                    if (self.args.verbose) {
+                        try writer.writeAll("[Error: Line exceeded maximum buffer size of 16MB. Skipping...]\n");
+                    }
+
+                    var skipped = false;
+                    while (true) {
+                        const n = try file.read(buf[0..buf.len]);
+                        if (n == 0) {
+                            eof = true;
+                            break;
+                        }
+                        if (std.mem.indexOfScalar(u8, buf[0..n], '\n')) |nl_idx| {
+                            const remaining = n - (nl_idx + 1);
+                            if (remaining > 0) {
+                                std.mem.copyForwards(u8, buf[0..remaining], buf[nl_idx + 1 .. n]);
+                            }
+                            read_pos = 0;
+                            write_pos = remaining;
+                            skipped = true;
+                            break;
+                        }
+                    }
+                    if (eof and !skipped) break;
+                    continue;
+                }
+
+                var new_cap = buf.len * 2;
+                if (new_cap > max_buf_size) new_cap = max_buf_size;
+                buf = try self.allocator.realloc(buf, new_cap);
+            }
+
+            const n = try file.read(buf[write_pos..]);
+            if (n == 0) {
+                eof = true;
+            } else {
+                write_pos += n;
+            }
         }
     }
 
     fn tailFile(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext) !void {
-        // Start from end of file, so we only see NEW lines
         var pos = try file.getEndPos();
         try file.seekTo(pos);
 
-        // Line accumulation buffer
-        var line_buf: std.ArrayListUnmanaged(u8) = .{};
-        defer line_buf.deinit(self.allocator);
+        var buf = try self.allocator.alloc(u8, 1024 * 1024);
+        defer self.allocator.free(buf);
 
-        var raw_buf: [4096]u8 = undefined;
+        var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
+        defer arena_instance.deinit();
+        const arena = arena_instance.allocator();
+
+        var read_pos: usize = 0;
+        var write_pos: usize = 0;
 
         while (true) {
-            const n = try file.read(raw_buf[0..]);
-            if (n == 0) {
-                // No new data – wait and retry
-                std.Thread.sleep(100 * std.time.ns_per_ms);
-                // Keep pos in sync in case of truncation/rotation
-                pos = file.getPos() catch pos;
-                continue;
+            while (std.mem.indexOfScalarPos(u8, buf[0..write_pos], read_pos, '\n')) |nl_offset| {
+                _ = arena_instance.reset(.retain_capacity);
+                var line = buf[read_pos..nl_offset];
+                if (line.len > 0 and line[line.len - 1] == '\r') {
+                    line = line[0 .. line.len - 1];
+                }
+                try self.processLine(arena, line, writer, ctx);
+                read_pos = nl_offset + 1;
             }
 
-            pos += n;
-            for (raw_buf[0..n]) |byte| {
-                if (byte == '\n') {
-                    var line: []const u8 = line_buf.items;
-                    if (line.len > 0 and line[line.len - 1] == '\r') {
-                        line = line[0 .. line.len - 1];
+            const unread_len = write_pos - read_pos;
+            if (read_pos > 0 and unread_len > 0) {
+                std.mem.copyForwards(u8, buf[0..unread_len], buf[read_pos..write_pos]);
+                read_pos = 0;
+                write_pos = unread_len;
+            } else if (read_pos > 0) {
+                read_pos = 0;
+                write_pos = 0;
+            }
+
+            if (write_pos == buf.len) {
+                const max_buf_size = 16 * 1024 * 1024;
+                if (buf.len >= max_buf_size) {
+                    if (self.args.verbose) {
+                        try writer.writeAll("[Error: Line exceeded maximum buffer size of 16MB. Skipping...]\n");
                     }
-                    try self.processLine(line, writer, ctx);
-                    line_buf.clearRetainingCapacity();
-                } else {
-                    try line_buf.append(self.allocator, byte);
+
+                    var skipped = false;
+                    while (!skipped) {
+                        const n = try file.read(buf[0..buf.len]);
+                        if (n == 0) {
+                            std.Thread.sleep(100 * std.time.ns_per_ms);
+                            pos = file.getPos() catch pos;
+                            continue;
+                        }
+                        pos += n;
+                        if (std.mem.indexOfScalar(u8, buf[0..n], '\n')) |nl_idx| {
+                            const remaining = n - (nl_idx + 1);
+                            if (remaining > 0) {
+                                std.mem.copyForwards(u8, buf[0..remaining], buf[nl_idx + 1 .. n]);
+                            }
+                            read_pos = 0;
+                            write_pos = remaining;
+                            skipped = true;
+                        }
+                    }
+                    continue;
                 }
+
+                var new_cap = buf.len * 2;
+                if (new_cap > max_buf_size) new_cap = max_buf_size;
+                buf = try self.allocator.realloc(buf, new_cap);
+            }
+
+            const n = try file.read(buf[write_pos..]);
+            if (n == 0) {
+                std.Thread.sleep(100 * std.time.ns_per_ms);
+                pos = file.getPos() catch pos;
+            } else {
+                write_pos += n;
+                pos += n;
             }
         }
     }
 
-    fn processLine(self: *Processor, line: []const u8, writer: anytype, ctx: *const LineContext) !void {
+    fn processLine(self: *Processor, arena: std.mem.Allocator, line: []const u8, writer: anytype, ctx: *const LineContext) !void {
         // Phase 1 Filtering: Global Raw String Check
         // If the line fails the global raw excludes or global raw includes, we can drop it immediately.
         if (!try filter_mod.passesRawExcludes(line, ctx.exclude)) return;
         if (!try filter_mod.passesRawIncludes(line, ctx.include)) return;
 
-        const entry_const = (try self.parser.parseLine(line, ctx.ts_key)) orelse return;
-        var entry = entry_const;
-        defer entry.deinit(self.allocator);
+        var entry = (try parser_mod.parseLine(arena, line, ctx.ts_key)) orelse return;
 
         // Range filter: checked first against the raw timestamp
         if (ctx.range_filter) |rf| {
@@ -352,7 +463,7 @@ pub const Processor = struct {
             // Value inspection overrides regular output
             if (ctx.values_config) |vc| {
                 if (entry.parsed.get(vc.key)) |val| {
-                    if (try self.handleValue(val, line, &entry, ctx, writer)) return;
+                    if (try self.handleValue(arena, val, line, &entry, ctx, writer)) return;
                 }
                 return;
             }
@@ -364,13 +475,13 @@ pub const Processor = struct {
         // Phase 2 Filtering: Key-Specific JSON Check
         if (!try filter_mod.passesParsed(line, &entry.parsed, ctx.include, ctx.exclude)) return;
 
-        if (self.formatEntry(&entry, ctx)) |formatted| {
-            defer self.allocator.free(@constCast(formatted));
+        if (self.formatEntry(arena, &entry, ctx)) |formatted| {
+            // No defer free needed due to arena
 
             // Value inspection overrides regular output
             if (ctx.values_config) |vc| {
                 if (entry.parsed.get(vc.key)) |val| {
-                    _ = try self.handleValue(val, formatted, &entry, ctx, writer);
+                    _ = try self.handleValue(arena, val, formatted, &entry, ctx, writer);
                 }
                 return;
             }
@@ -381,16 +492,14 @@ pub const Processor = struct {
             try writer.writeAll(line);
             try writer.writeAll("\n");
             if (self.args.verbose) {
-                const err_msg = try std.fmt.allocPrint(self.allocator, "[Formatting Error: {}]\n", .{err});
-                defer self.allocator.free(err_msg);
+                const err_msg = try std.fmt.allocPrint(arena, "[Formatting Error: {}]\n", .{err});
                 try writer.writeAll(err_msg);
             }
         }
     }
 
-    fn handleValue(self: *Processor, val_slice: []const u8, formatted: []const u8, entry: *const parser_mod.LogEntry, ctx: *const LineContext, writer: anytype) !bool {
-        const val_str = try valueToString(self.allocator, val_slice);
-        defer self.allocator.free(val_str);
+    fn handleValue(self: *Processor, arena: std.mem.Allocator, val_slice: []const u8, formatted: []const u8, entry: *const parser_mod.LogEntry, ctx: *const LineContext, writer: anytype) !bool {
+        const val_str = try valueToString(arena, val_slice);
 
         if (self.seen_values.contains(val_str)) return true;
 
@@ -404,8 +513,7 @@ pub const Processor = struct {
             },
             .datetime => {
                 if (entry.timestamp) |ts| {
-                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .datetime);
-                    defer self.allocator.free(dt);
+                    const dt = try formatTimestamp(arena, ts, ctx.zone_offset_secs, .datetime);
                     try writer.writeAll(dt);
                     try writer.writeAll(" ");
                 }
@@ -414,8 +522,7 @@ pub const Processor = struct {
             },
             .time => {
                 if (entry.timestamp) |ts| {
-                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .time);
-                    defer self.allocator.free(dt);
+                    const dt = try formatTimestamp(arena, ts, ctx.zone_offset_secs, .time);
                     try writer.writeAll(dt);
                     try writer.writeAll(" ");
                 }
@@ -424,8 +531,7 @@ pub const Processor = struct {
             },
             .timems => {
                 if (entry.timestamp) |ts| {
-                    const dt = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, .timems);
-                    defer self.allocator.free(dt);
+                    const dt = try formatTimestamp(arena, ts, ctx.zone_offset_secs, .timems);
                     try writer.writeAll(dt);
                     try writer.writeAll(" ");
                 }
@@ -442,9 +548,8 @@ pub const Processor = struct {
         return true;
     }
 
-    fn formatEntry(self: *Processor, entry: *const parser_mod.LogEntry, ctx: *const LineContext) ![]const u8 {
-        var res: []u8 = try self.allocator.dupe(u8, ctx.out_fmt);
-        errdefer self.allocator.free(res);
+    fn formatEntry(self: *Processor, arena: std.mem.Allocator, entry: *const parser_mod.LogEntry, ctx: *const LineContext) ![]const u8 {
+        var res: []u8 = try arena.dupe(u8, ctx.out_fmt);
 
         var start: usize = 0;
         while (std.mem.indexOfScalarPos(u8, res, start, '{')) |open_idx| {
@@ -504,7 +609,6 @@ pub const Processor = struct {
             const is_message = std.mem.eql(u8, key, "message");
 
             var replacement: []const u8 = "";
-            var free_replacement = false;
 
             if (std.mem.eql(u8, key, "timestamp") and spec != null) {
                 const fmt_type: TimestampFormat = if (std.mem.eql(u8, spec.?, "datetime"))
@@ -517,41 +621,31 @@ pub const Processor = struct {
                     continue; // unrecognized spec, fall through to regular key logic
 
                 if (entry.timestamp) |ts| {
-                    replacement = try formatTimestamp(self.allocator, ts, ctx.zone_offset_secs, fmt_type);
-                    free_replacement = true;
+                    replacement = try formatTimestamp(arena, ts, ctx.zone_offset_secs, fmt_type);
                 }
             } else {
                 if (entry.parsed.get(actual_key)) |val| {
                     if (is_message and ctx.message_expand_fn != null) {
-                        const raw_str = try valueToString(self.allocator, val);
-                        defer self.allocator.free(raw_str);
-                        replacement = try ctx.message_expand_fn.?(self, raw_str, &entry.parsed);
-                        free_replacement = true;
+                        const raw_str = try valueToString(arena, val);
+                        replacement = try ctx.message_expand_fn.?(self, arena, raw_str, &entry.parsed);
                     } else {
-                        replacement = try valueToString(self.allocator, val);
-                        free_replacement = true;
+                        replacement = try valueToString(arena, val);
                     }
                 } else if (!std.mem.eql(u8, actual_key, key)) {
                     if (entry.parsed.get(key)) |val| {
-                        replacement = try valueToString(self.allocator, val);
-                        free_replacement = true;
+                        replacement = try valueToString(arena, val);
                     }
                 }
             }
 
-            if (print_kv and free_replacement) {
-                const formatted_kv = try std.fmt.allocPrint(self.allocator, "{s}={s}", .{ key, replacement });
-                self.allocator.free(replacement);
-                replacement = formatted_kv;
+            if (print_kv and replacement.len > 0) {
+                replacement = try std.fmt.allocPrint(arena, "{s}={s}", .{ key, replacement });
             }
 
-            // Dupe needle because replace() frees and re-allocates res
-            const needle = try self.allocator.dupe(u8, res[open_idx .. close_idx + 1]);
-            defer self.allocator.free(needle);
+            // Dupe needle
+            const needle = try arena.dupe(u8, res[open_idx .. close_idx + 1]);
 
-            const new_res = try replace(self.allocator, res, needle, replacement);
-            if (free_replacement) self.allocator.free(replacement);
-            self.allocator.free(res);
+            const new_res = try replace(arena, res, needle, replacement);
             res = new_res;
             start = open_idx + replacement.len;
         }
@@ -559,33 +653,33 @@ pub const Processor = struct {
         return res;
     }
 
-    fn expandCurly(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "{", "}");
+    fn expandCurly(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "{", "}");
     }
 
-    fn expandJs(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "${", "}");
+    fn expandJs(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "${", "}");
     }
 
-    fn expandBrackets(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "[", "]");
+    fn expandBrackets(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "[", "]");
     }
 
-    fn expandParens(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "(", ")");
+    fn expandParens(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "(", ")");
     }
 
-    fn expandRuby(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "#{", "}");
+    fn expandRuby(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "#{", "}");
     }
 
-    fn expandDoubleCurly(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandGeneric(message, parsed, "{{", "}}");
+    fn expandDoubleCurly(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandGeneric(arena, message, parsed, "{{", "}}");
     }
 
-    fn expandGeneric(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8), open_seq: []const u8, close_seq: []const u8) ![]const u8 {
-        var res = try self.allocator.dupe(u8, message);
-        errdefer self.allocator.free(res);
+    fn expandGeneric(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8), open_seq: []const u8, close_seq: []const u8) ![]const u8 {
+        _ = self;
+        var res = try arena.dupe(u8, message);
 
         var start: usize = 0;
         while (std.mem.indexOfPos(u8, res, start, open_seq)) |open_idx| {
@@ -599,13 +693,10 @@ pub const Processor = struct {
                 }
 
                 if (parsed.get(key)) |val| {
-                    const replacement = try formatValue(self.allocator, val, spec);
-                    defer self.allocator.free(replacement);
-                    const needle = try self.allocator.dupe(u8, res[open_idx .. close_idx + close_seq.len]);
-                    defer self.allocator.free(needle);
+                    const replacement = try formatValue(arena, val, spec);
+                    const needle = try arena.dupe(u8, res[open_idx .. close_idx + close_seq.len]);
 
-                    const new_res = try replace(self.allocator, res, needle, replacement);
-                    if (res.ptr != message.ptr) self.allocator.free(res);
+                    const new_res = try replace(arena, res, needle, replacement);
                     res = new_res;
                     start = open_idx + replacement.len;
                 } else {
@@ -618,21 +709,21 @@ pub const Processor = struct {
         return res;
     }
 
-    fn expandPrintf(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandAlphanum(message, parsed, '%');
+    fn expandPrintf(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandAlphanum(arena, message, parsed, '%');
     }
 
-    fn expandEnv(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandAlphanum(message, parsed, '$');
+    fn expandEnv(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandAlphanum(arena, message, parsed, '$');
     }
 
-    fn expandColon(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
-        return self.expandAlphanum(message, parsed, ':');
+    fn expandColon(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8)) ![]const u8 {
+        return self.expandAlphanum(arena, message, parsed, ':');
     }
 
-    fn expandAlphanum(self: *Processor, message: []const u8, parsed: *const std.StringHashMap([]const u8), leading_char: u8) ![]const u8 {
-        var res = try self.allocator.dupe(u8, message);
-        errdefer self.allocator.free(res);
+    fn expandAlphanum(self: *Processor, arena: std.mem.Allocator, message: []const u8, parsed: *const std.StringHashMap([]const u8), leading_char: u8) ![]const u8 {
+        _ = self;
+        var res = try arena.dupe(u8, message);
 
         var start: usize = 0;
         while (std.mem.indexOfScalarPos(u8, res, start, leading_char)) |open_idx| {
@@ -659,13 +750,9 @@ pub const Processor = struct {
                 }
 
                 if (parsed.get(key)) |val| {
-                    const replacement = try formatValue(self.allocator, val, spec);
-                    defer self.allocator.free(replacement);
-                    const needle = try self.allocator.dupe(u8, res[open_idx..end_idx]);
-                    defer self.allocator.free(needle);
-
-                    const new_res = try replace(self.allocator, res, needle, replacement);
-                    if (res.ptr != message.ptr) self.allocator.free(res);
+                    const replacement = try formatValue(arena, val, spec);
+                    const needle = try arena.dupe(u8, res[open_idx..end_idx]);
+                    const new_res = try replace(arena, res, needle, replacement);
                     res = new_res;
                     start = open_idx + replacement.len;
                 } else {

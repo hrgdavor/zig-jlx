@@ -332,7 +332,7 @@ jlx -c myapp.conf -t app.log -i ERROR -e "connection reset"
 `jlx` is designed for high-performance log processing, employing several memory and allocation optimizations to minimize overhead:
 
 ### Dynamic Block Buffering (1MB - 16MB)
-Instead of traditionally allocating memory for each line being read, `jlx` utilizes a single, reusable `1MB` block buffer. The file stream is bulk-read directly into this buffer. 
+Instead of traditionally allocating memory for each line being read, `jlx` utilizes a single, reusable `1MB - 16MB` block buffer. The file stream is bulk-read directly into this buffer. 
 Lines are scanned in-place by simply hunting for the `\n` character. Incomplete lines at the end of the buffer are intelligently shifted (using `std.mem.copyForwards`) to the start, and the buffer resumes filling natively.
 
 This approach guarantees zero file-reading allocations for any line under 1MB. If reading encounters a massive log entry, the buffer dynamically doubles up to a hard cap of `16MB`. If a line exceeds 16MB without a newline, `jlx` intercepts it, prints a warning (in verbose mode), and safely skips to the next newline to prevent Out-Of-Memory (OOM) crashes.

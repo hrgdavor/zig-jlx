@@ -11,3 +11,6 @@ out_default.txt
 out_raw.txt
 out_timed.txt
 out.txt
+build.log
+build.txt
+fast_reader.obj

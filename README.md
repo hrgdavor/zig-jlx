@@ -23,7 +23,7 @@ Each log line can be optionally be preceded by arbitrary text (the first `{` mar
 ```sh
 git clone <repo-url>
 cd zig-jlx
-zig build -Doptimize=ReleaseFast
+zig build -Doptimize=ReleaseSafe
 # binary is in zig-out/bin/jlx  (or jlx.exe on Windows)
 ```
 
@@ -32,32 +32,32 @@ zig build -Doptimize=ReleaseFast
 #### Linux (x86_64)
 
 ```sh
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-musl
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-linux-musl
 # Produces a fully static binary — no glibc dependency
 ```
 
 #### Linux (ARM64 / aarch64)
 
 ```sh
-zig build -Doptimize=ReleaseFast -Dtarget=aarch64-linux-musl
+zig build -Doptimize=ReleaseSafe -Dtarget=aarch64-linux-musl
 ```
 
 #### macOS (Apple Silicon — M1/M2/M3)
 
 ```sh
-zig build -Doptimize=ReleaseFast -Dtarget=aarch64-macos
+zig build -Doptimize=ReleaseSafe -Dtarget=aarch64-macos
 ```
 
 #### macOS (Intel x86_64)
 
 ```sh
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-macos
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-macos
 ```
 
 #### Windows (x86_64)
 
 ```sh
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-windows
 # Produces zig-out/bin/jlx.exe
 ```
 
@@ -67,13 +67,13 @@ Zig supports cross-compilation out of the box. You can build for any target from
 
 ```sh
 # Build a Linux binary from macOS or Windows
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-linux-musl
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-linux-musl
 
 # Build a Windows binary from Linux
-zig build -Doptimize=ReleaseFast -Dtarget=x86_64-windows
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-windows
 
 # Build a macOS ARM64 binary from Linux
-zig build -Doptimize=ReleaseFast -Dtarget=aarch64-macos
+zig build -Doptimize=ReleaseSafe -Dtarget=aarch64-macos
 ```
 
 ### Optimize modes

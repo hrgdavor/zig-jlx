@@ -36,7 +36,7 @@ jobs:
           version: '0.15.0'
 
       - name: Build
-        run: zig build -Doptimize=ReleaseSmall -Dtarget=${{ matrix.target }} --summary all
+        run: zig build -Doptimize=ReleaseFast -Dtarget=${{ matrix.target }} --summary all
 
       - name: Package (Unix — tar.gz)
         if: runner.os != 'Windows'

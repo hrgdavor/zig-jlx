@@ -34,11 +34,11 @@ pub fn build(b: *std.Build) void {
     });
     const mvzr_mod = mvzr_dep.module("mvzr");
 
-    const simargs_dep = b.dependency("simargs", .{
+    const args_dep = b.dependency("args", .{
         .target = target,
         .optimize = optimize,
     });
-    const simargs_mod = simargs_dep.module("simargs");
+    const args_mod = args_dep.module("args");
 
     const mod = b.addModule("zig_jlx", .{
         // The root source file is the "entry point" of this module. Users of
@@ -53,7 +53,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .imports = &.{
             .{ .name = "mvzr", .module = mvzr_mod },
-            .{ .name = "simargs", .module = simargs_mod },
+            .{ .name = "args", .module = args_mod },
         },
     });
 
@@ -96,7 +96,7 @@ pub fn build(b: *std.Build) void {
                 // importing modules from different packages).
                 .{ .name = "zig_jlx", .module = mod },
                 .{ .name = "mvzr", .module = mvzr_mod },
-                .{ .name = "simargs", .module = simargs_mod },
+                .{ .name = "args", .module = args_mod },
             },
         }),
     });

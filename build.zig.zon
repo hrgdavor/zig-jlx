@@ -36,13 +36,13 @@
             .url = "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.tar.gz",
             .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
         },
-        .simargs = .{
-            .url = "git+https://github.com/jiacai2050/zigcli#67a06e34cbe25a39bb86e35796cc5a0ca45a31f7",
-            .hash = "zigcli-0.3.1-ORC7jBfPAgCnJGpRG8NmsDjsjwhe4oL3fwKLCh-HRw6j",
-        },
         .libxev = .{
             .url = "git+https://github.com/mitchellh/libxev#42d4ead52667e03619dcd5b1a3ca8ef7d5dd24ed",
             .hash = "libxev-0.0.0-86vtc0IbEwBzMSXa-ZPZ8JpcV4Mw1SrsTuvtJmFAQ7Uu",
+        },
+        .args = .{
+            .url = "git+https://github.com/ikskuh/zig-args?ref=master#e060ac80c244e9675471b6d213b22ddc83cc8f98",
+            .hash = "args-0.0.0-CiLiqo_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d",
         },
     },
     .paths = .{

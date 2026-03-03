@@ -1,16 +1,17 @@
 const std = @import("std");
+const args_lib = @import("args");
 
 pub const Args = struct {
-    config_path: ?[]const u8 = null,
+    config: ?[]const u8 = null,
     profile: ?[]const u8 = null,
     file_path: ?[]const u8 = null,
     tail: bool = false,
-    output_path: ?[]const u8 = null,
+    output: ?[]const u8 = null,
     passthrough: bool = false,
-    /// Raw filter strings from -i / --include flags
-    include_filters: std.ArrayListUnmanaged([]const u8) = .{},
-    /// Raw filter strings from -e / --exclude flags
-    exclude_filters: std.ArrayListUnmanaged([]const u8) = .{},
+    /// Filter string from -i / --include flag
+    include: ?[]const u8 = null,
+    /// Filter string from -e / --exclude flag
+    exclude: ?[]const u8 = null,
     /// Raw range string from -r / --range (e.g. "08:00..09:30")
     range: ?[]const u8 = null,
     /// Timezone offset string from -z / --zone (e.g. "+01:00")
@@ -20,8 +21,9 @@ pub const Args = struct {
     /// Collect and list all unique keys found in JSON lines
     keys: bool = false,
     verbose: bool = false,
+    help: bool = false,
 
-    pub const SimArgsConfig = struct {
+    pub const ArgsConfig = struct {
         config: ?[]const u8 = null,
         profile: ?[]const u8 = null,
         tail: bool = false,
@@ -36,20 +38,23 @@ pub const Args = struct {
         verbose: bool = false,
         help: bool = false,
 
-        pub const __shorts__ = .{
-            .config = .c,
-            .profile = .p,
-            .tail = .t,
-            .output = .o,
-            .passthrough = .x,
-            .include = .i,
-            .exclude = .e,
-            .range = .r,
-            .zone = .z,
-            .values = .v,
-            .help = .h,
+        // zig-args uses this specific field name for short flags
+        pub const shorthands = .{
+            .c = "config",
+            .p = "profile",
+            .t = "tail",
+            .o = "output",
+            .x = "passthrough",
+            .i = "include",
+            .e = "exclude",
+            .r = "range",
+            .z = "zone",
+            .v = "values",
+            .h = "help",
         };
 
+        // zig-args doesn't natively use this, but we keep it so your
+        // metadata is preserved for the rest of your codebase logic.
         pub const __messages__ = .{
             .config = "Config file (required for most commands)",
             .profile = "Profile to use from config",
@@ -67,40 +72,64 @@ pub const Args = struct {
         };
     };
 
-    /// Parses command-line arguments.
-    /// Uses the provided allocator natively. It's highly recommended to use an
-    /// `ArenaAllocator` since `Args` does not track or free individual duplicate
-    /// strings or arrays once they are created.
     pub fn parse(arena_allocator: std.mem.Allocator) !Args {
-        const simargs = @import("simargs");
-        var simargs_parsed = try simargs.parse(arena_allocator, SimArgsConfig, "[file]", "0.1.0");
-        defer simargs_parsed.deinit();
+        // This is the core change: parseForCurrentProcess handles flags
+        // found anywhere in the command line (interspersed).
+        const parsed = try args_lib.parseForCurrentProcess(ArgsConfig, arena_allocator, args_lib.ErrorHandling.print);
 
         var args = Args{};
 
-        if (simargs_parsed.args.config) |c| args.config_path = try arena_allocator.dupe(u8, c);
-        if (simargs_parsed.args.profile) |p| args.profile = try arena_allocator.dupe(u8, p);
-        if (simargs_parsed.args.output) |o| args.output_path = try arena_allocator.dupe(u8, o);
-        args.tail = simargs_parsed.args.tail;
-        args.passthrough = simargs_parsed.args.passthrough;
-        args.keys = simargs_parsed.args.keys;
-        args.verbose = simargs_parsed.args.verbose;
-
-        if (simargs_parsed.args.include) |i| {
-            try args.include_filters.append(arena_allocator, try arena_allocator.dupe(u8, i));
-        }
-        if (simargs_parsed.args.exclude) |e| {
-            try args.exclude_filters.append(arena_allocator, try arena_allocator.dupe(u8, e));
+        // Maintain your logic: copy fields from the parser result to your Args struct.
+        inline for (@typeInfo(ArgsConfig).@"struct".fields) |f| {
+            if (@hasField(Args, f.name)) {
+                @field(args, f.name) = @field(parsed.options, f.name);
+            }
         }
 
-        if (simargs_parsed.args.range) |r| args.range = try arena_allocator.dupe(u8, r);
-        if (simargs_parsed.args.zone) |z| args.zone = try arena_allocator.dupe(u8, z);
-        if (simargs_parsed.args.values) |v| args.values = try arena_allocator.dupe(u8, v);
-
-        if (simargs_parsed.positional_args.len > 0) {
-            args.file_path = try arena_allocator.dupe(u8, simargs_parsed.positional_args[0]);
+        // Positional args are now correctly separated from flags.
+        if (parsed.positionals.len > 0) {
+            args.file_path = parsed.positionals[0];
         }
 
         return args;
+    }
+
+    pub fn printHelp() !void {
+        var stdout_buffer: [1024]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+        const stdout = &stdout_writer.interface;
+        const config = ArgsConfig;
+
+        try stdout.print("Usage: [options] [file]\n\nOptions:\n", .{});
+
+        inline for (@typeInfo(config).@"struct".fields) |field| {
+            // Skip internal metadata fields
+            comptime if (std.mem.eql(u8, field.name, "help")) continue;
+
+            // Find if there's a shorthand for this field
+            var short_char: ?u8 = null;
+            inline for (@typeInfo(@TypeOf(config.shorthands)).@"struct".fields) |s| {
+                if (std.mem.eql(u8, @field(config.shorthands, s.name), field.name)) {
+                    short_char = s.name[0];
+                }
+            }
+
+            // Get the help message
+            const msg = if (@hasField(@TypeOf(config.__messages__), field.name))
+                @field(config.__messages__, field.name)
+            else
+                "";
+
+            // Print the formatted line
+            if (short_char) |c| {
+                try stdout.print("  -{c}, --{s:<15} {s}\n", .{ c, field.name, msg });
+            } else {
+                try stdout.print("      --{s:<15} {s}\n", .{ field.name, msg });
+            }
+        }
+
+        try stdout.print("  -h, --help            {s}\n", .{config.__messages__.help});
+
+        try stdout.flush();
     }
 };

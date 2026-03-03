@@ -210,8 +210,8 @@ pub const Processor = struct {
             }
         }
 
-        for (self.args.include_filters.items) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
-        for (self.args.exclude_filters.items) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
+        if (self.args.include) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
+        if (self.args.exclude) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
 
         // Zone offset — parsed once, used for range matching and datetime formatting
         const zone_offset_secs = filter_mod.parseZoneOffset(self.args.zone) catch 0;

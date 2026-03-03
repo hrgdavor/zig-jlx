@@ -40,7 +40,12 @@ pub fn main() !void {
 
     const args = try args_mod.Args.parse(parse_allocator);
 
-    if (args.config_path == null and !args.keys) {
+    if (args.help) {
+        try args_mod.Args.printHelp();
+        std.process.exit(1);
+    }
+
+    if (args.config == null and !args.keys) {
         const stderr = std.fs.File.stderr();
         try stderr.writeAll(HELP);
 
@@ -65,7 +70,7 @@ pub fn main() !void {
 
     var config = config_mod.Config.init(parse_allocator);
 
-    if (args.config_path) |path| {
+    if (args.config) |path| {
         try config.load(path);
     }
 

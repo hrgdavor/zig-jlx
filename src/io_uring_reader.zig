@@ -81,16 +81,6 @@ pub const IoUringReader = struct {
         _ = std.os.linux.io_uring_unregister(self.ring.fd, std.os.linux.IORING.UNREGISTER_BUFFERS, null, 0);
     }
 
-    pub fn deinit(self: *IoUringReader) void {
-        if (builtin.os.tag == .linux) {
-            self.unregisterBuffers();
-            self.ring.deinit();
-        }
-        self.allocator.free(self.buffers[0]);
-        self.allocator.free(self.buffers[1]);
-        self.allocator.destroy(self);
-    }
-
     fn startAsyncRead(self: *IoUringReader, buf_idx: u1, start_offset: usize) !void {
         if (self.eof_reached or self.io_pending) return;
         if (builtin.os.tag != .linux) return;
@@ -228,5 +218,17 @@ pub const IoUringReader = struct {
     fn deinitErased(ptr: *anyopaque) void {
         const self: *IoUringReader = @ptrCast(@alignCast(ptr));
         self.deinit();
+    }
+
+    // --- housekeeping ---
+
+    pub fn deinit(self: *IoUringReader) void {
+        if (builtin.os.tag == .linux) {
+            self.unregisterBuffers();
+            self.ring.deinit();
+        }
+        self.allocator.free(self.buffers[0]);
+        self.allocator.free(self.buffers[1]);
+        self.allocator.destroy(self);
     }
 };

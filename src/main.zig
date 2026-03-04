@@ -78,7 +78,11 @@ pub fn main() !void {
     }
 
     if (args.serve) {
-        var server = server_mod.Server.init(allocator, args, config);
+        var final_args = args;
+        if (final_args.port == null) final_args.port = config.port orelse 3000;
+        if (final_args.www == null) final_args.www = config.www;
+
+        var server = server_mod.Server.init(allocator, final_args, config);
         try server.run();
         return;
     }

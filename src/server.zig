@@ -22,11 +22,12 @@ pub const Server = struct {
     }
 
     pub fn run(self: *Server) !void {
-        const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, self.args.port);
+        const port = self.args.port orelse 3000;
+        const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
         var server = try address.listen(.{ .reuse_address = true });
         defer server.deinit();
 
-        std.log.info("jlx server listening on http://0.0.0.0:{d}", .{self.args.port});
+        std.log.info("jlx server listening on http://0.0.0.0:{d}", .{port});
 
         while (true) {
             const conn = try server.accept();

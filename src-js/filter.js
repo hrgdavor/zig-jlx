@@ -158,8 +158,8 @@ export class RangeFilter {
     }
 
     static parse(text, zoneOffsetSecs) {
+        if (!text.includes("..")) return null;
         const parts = text.split("..");
-        if (parts.length !== 2) throw new Error("Invalid range syntax");
 
         const fromStr = parts[0].trim();
         const toStr = parts[1].trim();

@@ -169,18 +169,31 @@ function createLogLineElement(processed, raw) {
 async function update() {
     const processor = await getProcessor();
 
-    let matches = 0;
+    const rangeText = rangeFilter.value;
+    const rangeVal = rangeText ? parseInt(rangeText) : null;
+    const isNumericRange = rangeVal !== null && !isNaN(rangeVal) && !rangeText.includes('..');
+
+    let matches = [];
     output.innerHTML = '';
 
     for (const line of loadedLogLines) {
         const processed = processor.processLine(line);
         if (processed !== null) {
-            matches++;
-            output.appendChild(createLogLineElement(processed, line));
+            matches.push({ processed, raw: line });
+            if (isNumericRange && rangeVal > 0 && matches.length >= rangeVal) break;
         }
     }
 
-    matchStats.textContent = `Matched ${matches} of ${loadedLogLines.length} lines`;
+    let displayMatches = matches;
+    if (isNumericRange && rangeVal < 0) {
+        displayMatches = matches.slice(rangeVal);
+    }
+
+    for (const m of displayMatches) {
+        output.appendChild(createLogLineElement(m.processed, m.raw));
+    }
+
+    matchStats.textContent = `Matched ${displayMatches.length} of ${loadedLogLines.length} lines`;
 
     // CLI update
     let cmd = 'jlx -c jlx.conf';

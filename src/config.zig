@@ -34,6 +34,8 @@ pub const FolderConfig = struct {
 };
 
 pub const Config = struct {
+    port: ?u16 = null,
+    www: ?[]const u8 = null,
     folders: std.array_list.AlignedManaged(FolderConfig, null),
     arena_allocator: std.mem.Allocator,
 
@@ -73,7 +75,7 @@ pub const Config = struct {
                     try f.profiles.put(pname_dupe, .{ .name = pname_dupe });
                     current_profile = f.profiles.getPtr(pname_dupe).?;
                 }
-            } else if (current_folder) |f| {
+            } else {
                 if (std.mem.indexOfAny(u8, trimmed, "=")) |idx| {
                     const key = std.mem.trim(u8, trimmed[0..idx], " ");
                     const val = std.mem.trim(u8, trimmed[idx + 1 ..], " ");
@@ -86,12 +88,12 @@ pub const Config = struct {
                         if (std.mem.eql(u8, key, "message_expand")) p.message_expand = try self.arena_allocator.dupe(u8, val);
                         if (std.mem.eql(u8, key, "include")) p.include_filters = try parseFilterList(self.arena_allocator, val);
                         if (std.mem.eql(u8, key, "exclude")) p.exclude_filters = try parseFilterList(self.arena_allocator, val);
-                    } else {
+                    } else if (current_folder) |f| {
                         if (std.mem.eql(u8, key, "paths")) {
                             var iter = std.mem.splitSequence(u8, val, ",");
                             var path_list = std.array_list.AlignedManaged([]const u8, null).init(self.arena_allocator);
-                            while (iter.next()) |p| {
-                                try path_list.append(try self.arena_allocator.dupe(u8, std.mem.trim(u8, p, " ")));
+                            while (iter.next()) |path_item| {
+                                try path_list.append(try self.arena_allocator.dupe(u8, std.mem.trim(u8, path_item, " ")));
                             }
                             f.paths = try path_list.toOwnedSlice();
                         } else if (std.mem.eql(u8, key, "timestamp")) {
@@ -108,6 +110,16 @@ pub const Config = struct {
                             f.include_filters = try parseFilterList(self.arena_allocator, val);
                         } else if (std.mem.eql(u8, key, "exclude")) {
                             f.exclude_filters = try parseFilterList(self.arena_allocator, val);
+                        }
+                    } else {
+                        // Top-level (not in any [folders] or [profile])
+                        if (std.mem.eql(u8, key, "port")) {
+                            self.port = std.fmt.parseInt(u16, val, 10) catch |err| {
+                                std.log.warn("Invalid port in config: {s} ({})", .{ val, err });
+                                continue;
+                            };
+                        } else if (std.mem.eql(u8, key, "www")) {
+                            self.www = try self.arena_allocator.dupe(u8, val);
                         }
                     }
                 }

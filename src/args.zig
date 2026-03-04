@@ -25,7 +25,7 @@ pub const Args = struct {
 
     // Server mode
     serve: bool = false,
-    port: u16 = 3000,
+    port: ?u16 = null,
     www: ?[]const u8 = null,
 
     pub const ArgsConfig = struct {
@@ -45,7 +45,7 @@ pub const Args = struct {
         help: bool = false,
 
         serve: bool = false,
-        port: u16 = 3000,
+        port: ?u16 = null,
         www: ?[]const u8 = null,
 
         // zig-args uses this specific field name for short flags

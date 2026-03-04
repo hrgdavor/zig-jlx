@@ -10,6 +10,8 @@ When working with string interpolation mappings (like generating `{name}` replac
 - **No string tracking leaks**: It demands you pass in a `std.mem.Allocator` that is tied strictly to a `std.heap.ArenaAllocator`. It performs heavy `replace` operations recursively with absolute impunity because the entire memory boundary shrinks contextually outside in `O(1)`.
 - **Pre-baked Parsers**: Shipped standard functions for `expandCurly "{...}"`, `expandJs "${...}"`, `expandRuby "#{...}"`, and more.
 - **Specifier Resilience**: Understands advanced interpolations using `:` to fall back. E.g. `${time:datetime}` triggers parsing but isolates key targets dynamically.
+- **Key Padding**: Direct support for right-padding with `{key:N}` syntax.
+- **Flexible Data Types**: Any numeric field can be formatted as a timestamp seamlessly using standard specifiers.
 
 ## Use Cases
 

@@ -2,6 +2,7 @@ const std = @import("std");
 const args_mod = @import("args.zig");
 const config_mod = @import("config.zig");
 const processor_mod = @import("processor.zig");
+const server_mod = @import("server.zig");
 
 const HELP =
     \\Usage: jlx -c <config> [options] [file]
@@ -46,7 +47,10 @@ pub fn main() !void {
     }
 
     if (args.config == null and !args.keys) {
-        const stderr = std.fs.File.stderr();
+        var stderr_buffer: [4096]u8 = undefined;
+        var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
+        const stderr = &stderr_writer.interface;
+
         try stderr.writeAll(HELP);
 
         // If a file path was given, resolve its parent and inject it into the sample
@@ -54,17 +58,16 @@ pub fn main() !void {
             var real_buf: [4096]u8 = undefined;
             const real = std.fs.cwd().realpath(fp, &real_buf) catch fp;
             const parent = std.fs.path.dirname(real) orelse real;
-            var path_buf: [4096 + 64]u8 = undefined;
-            const paths_line = try std.fmt.bufPrint(&path_buf,
+            try stderr.print(
                 \\
                 \\; Suggested paths for your file:
                 \\paths     = {s}
                 \\
             , .{parent});
-            try stderr.writeAll(paths_line);
         }
 
         try stderr.writeAll("\n");
+        try stderr.flush();
         std.process.exit(1);
     }
 
@@ -74,6 +77,15 @@ pub fn main() !void {
         try config.load(path);
     }
 
+    if (args.serve) {
+        var server = server_mod.Server.init(allocator, args, config);
+        try server.run();
+        return;
+    }
+
     var processor = processor_mod.Processor.init(allocator, args, config);
-    try processor.run();
+    processor.run() catch |err| {
+        std.debug.print("\n[Application Error: {}]\n", .{err});
+        std.process.exit(1);
+    };
 }

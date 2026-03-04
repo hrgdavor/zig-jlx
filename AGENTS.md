@@ -109,11 +109,19 @@ Buffered writers also return a struct with an `.interface` of type `std.Io.Write
 ```zig
 var out_buf: [4096]u8 = undefined;
 var writer_struct = std.fs.File.stdout().writer(&out_buf);
-try someFunction(&writer_struct); 
+try someFunction(&writer_struct.interface); 
 
-fn someFunction(w: anytype) !void {
-    try w.interface.writeAll("hello\n");
+fn someFunction(w: *std.Io.Writer) !void {
+    try w.writeAll("hello\n");
+    try w.flush(); // Ensure data is sent
 }
+```
+
+### Explicit Flushing
+When using buffered writers (the default in 0.15.2 for `stdout`), you **MUST** call `flush()` to ensure data is actually written to the underlying file descriptor. This is critical for tail/follow commands and SSE servers.
+
+```zig
+try writer.interface.flush();
 ```
 
 ### Reading Lines
@@ -197,24 +205,38 @@ const x = @intFromBool(some_bool);
 
 ## Formatting and Writing
 
-### Writing to `std.fs.File`
+### Writing to `stdout`
 In Zig 0.15, `std.fs.File` (such as `std.fs.File.stdout()`) **does not have a `.print()` method**. If you try to use `try writer.print(...)`, you will get a `"no field or member function named 'print'"` compilation error.
 
-Instead, you must allocate the formatted string using `std.fmt.allocPrint` and write it using `writeAll()`.
+Instead, you must allocate use buffers to create stdout
 
 ```zig
 // ❌ WRONG: Will fail to compile
 // try stdout.print("Error: {}\n", .{err});
 
-// ✅ CORRECT: Allocate and use writeAll
-const msg = try std.fmt.allocPrint(allocator, "Error: {}\n", .{err});
-defer allocator.free(msg);
-try stdout.writeAll(msg);
+// ✅ CORRECT: Allocate buffer and use.interface
+var stdout_buffer: [1024]u8 = undefined;
+var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+const stdout = &stdout_writer.interface;
+try stdout.print("Error: {}\n", .{err});
+```
+and at end of the scope flush
+
+```zig
+try stdout.flush();
 ```
 
-For statically known strings, you can use `.writeAll()` directly:
+## Metaprogramming & Method Discovery
+
+### `std.meta.hasMethod` vs `@hasDecl`
+In generic code (like a `Processor` handling multiple writer types), `@hasDecl(T, "flush")` will fail if `T` is a pointer (e.g., `*std.Io.Writer`). 
+
+**ALWAYS** use `std.meta.hasMethod` to check for member functions, as it correctly handles both structs and pointers-to-structs.
+
 ```zig
-try stdout.writeAll("hello\n");
+if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
+    try writer.flush();
+}
 ```
 
 ## Common Patterns Summary

@@ -32,7 +32,7 @@ pub fn parseLine(allocator: std.mem.Allocator, line: []const u8, ts_key: []const
     return entry;
 }
 
-fn parseTimestamp(val_str: []const u8) ?i64 {
+pub fn parseTimestamp(val_str: []const u8) ?i64 {
     // Strip quotes if it was a string
     const str = if (val_str.len >= 2 and val_str[0] == '"') val_str[1 .. val_str.len - 1] else val_str;
     var ts: i64 = 0;

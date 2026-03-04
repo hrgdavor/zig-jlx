@@ -40,15 +40,23 @@ async function build() {
         writeFileSync(destLogPath, stdout);
     }
 
-    // 3. Copy demo.html to docs/index.html
-    console.log('Copying demo.html to docs/index.html...');
+    // 4. Mirror assets to zig-out/web for Zig embedding
+    console.log('Mirroring assets to zig-out/web/ for Zig embedding...');
+    const webDistDir = join(rootDir, 'zig-out', 'web');
+    if (!existsSync(webDistDir)) mkdirSync(webDistDir, { recursive: true });
+
     const html = readFileSync(join(srcDir, 'demo.html'), 'utf8');
     writeFileSync(join(docsDir, 'index.html'), html);
+    writeFileSync(join(webDistDir, 'index.html'), html);
+
+    const bundledJs = readFileSync(join(docsDir, 'demo-client.js'));
+    writeFileSync(join(webDistDir, 'demo-client.js'), bundledJs);
 
     console.log(`Standalone demo build complete!`);
     console.log(`Main entry: ${join(docsDir, 'index.html')}`);
     console.log(`Bundled script: ${join(docsDir, 'demo-client.js')}`);
     console.log(`Log sample: ${destLogPath}`);
+    console.log(`Assets mirrored to: ${webDistDir}`);
 }
 
 build().catch(console.error);

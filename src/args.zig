@@ -5,7 +5,7 @@ pub const Args = struct {
     config: ?[]const u8 = null,
     profile: ?[]const u8 = null,
     file_path: ?[]const u8 = null,
-    tail: bool = false,
+    follow: bool = false,
     output: ?[]const u8 = null,
     passthrough: bool = false,
     /// Filter string from -i / --include flag
@@ -23,10 +23,16 @@ pub const Args = struct {
     verbose: bool = false,
     help: bool = false,
 
+    // Server mode
+    serve: bool = false,
+    port: u16 = 3000,
+    www: ?[]const u8 = null,
+
     pub const ArgsConfig = struct {
         config: ?[]const u8 = null,
         profile: ?[]const u8 = null,
-        tail: bool = false,
+        file_path: ?[]const u8 = null,
+        follow: bool = false,
         output: ?[]const u8 = null,
         passthrough: bool = false,
         include: ?[]const u8 = null,
@@ -38,11 +44,15 @@ pub const Args = struct {
         verbose: bool = false,
         help: bool = false,
 
+        serve: bool = false,
+        port: u16 = 3000,
+        www: ?[]const u8 = null,
+
         // zig-args uses this specific field name for short flags
         pub const shorthands = .{
             .c = "config",
             .p = "profile",
-            .t = "tail",
+            .f = "follow",
             .o = "output",
             .x = "passthrough",
             .i = "include",
@@ -51,6 +61,8 @@ pub const Args = struct {
             .z = "zone",
             .v = "values",
             .h = "help",
+            .s = "serve",
+            .w = "www",
         };
 
         // zig-args doesn't natively use this, but we keep it so your
@@ -58,7 +70,7 @@ pub const Args = struct {
         pub const __messages__ = .{
             .config = "Config file (required for most commands)",
             .profile = "Profile to use from config",
-            .tail = "Tail the file — shows only newly appended lines",
+            .follow = "Follow the file — shows newly appended lines",
             .output = "Write output to file (default: stdout)",
             .passthrough = "Echo original line as-is (valid JSON lines only)",
             .include = "Include only lines matching filter",
@@ -69,6 +81,9 @@ pub const Args = struct {
             .keys = "Collect and list all unique keys (standalone)",
             .verbose = "Print errors when output formatting fails",
             .help = "Print this help message and exit",
+            .serve = "Start a web server for interactive log analysis",
+            .port = "Port to listen on (default 3000)",
+            .www = "Path to static files to serve",
         };
     };
 

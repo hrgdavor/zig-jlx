@@ -1,7 +1,6 @@
 import { Config } from './config.js';
 import { Processor } from './processor.js';
 
-const logInput = document.getElementById('logInput');
 const configEditor = document.getElementById('configEditor');
 const workflowSelect = document.getElementById('workflowSelect');
 const configSampleSelect = document.getElementById('configSampleSelect');
@@ -14,6 +13,9 @@ const cliCommand = document.getElementById('cliCommand');
 const matchStats = document.getElementById('matchStats');
 const copyBtn = document.getElementById('copyBtn');
 const fileInput = document.getElementById('fileInput');
+const autoScrollToggle = document.getElementById('autoScrollToggle');
+
+let loadedLogLines = [];
 
 // Configuration Samples
 const configSamples = [
@@ -63,30 +65,6 @@ const workflows = [
     }
 ];
 
-// Seed data (truncated for browser memory)
-const generateTicketLog = (count) => {
-    const logs = [];
-    const levels = ["INFO", "WARN", "ERROR", "DEBUG"];
-    const loggers = ["ticket-service", "user-api", "db-handler"];
-    const baseTime = new Date("2026-03-04T08:00:00Z").getTime();
-
-    for (let i = 0; i < count; i++) {
-        const ts = baseTime + i * 10000; // 10s intervals
-        logs.push(JSON.stringify({
-            ts,
-            level: levels[Math.floor(Math.random() * levels.length)],
-            logger: loggers[Math.floor(Math.random() * loggers.length)],
-            message: i % 5 === 0 ? "Updated status for ticket TKT-1234: Resolved" : "Fetching ticket data...",
-            sessionId: "sess-9988223",
-            userId: "USR-100",
-            thread: "pool-1"
-        }));
-    }
-    return logs.join('\n');
-};
-
-const defaultSeedLogs = generateTicketLog(200);
-logInput.value = defaultSeedLogs;
 configEditor.value = configSamples[0].content;
 
 // Auto-load sample log if running on a server (e.g. GitHub Pages)
@@ -96,7 +74,7 @@ async function tryAutoLoadSample() {
         if (resp.ok) {
             const text = await resp.text();
             if (text.trim()) {
-                logInput.value = text;
+                loadedLogLines = text.split('\n').filter(l => l.trim());
                 update();
             }
         }
@@ -138,12 +116,10 @@ configSampleSelect.onchange = (e) => {
     }
 };
 
-async function update() {
-    const lines = logInput.value.split('\n');
+async function getProcessor() {
     const config = new Config();
-
     try {
-        config.parse(configEditor.value);
+        config.parse(configEditor.value || "");
     } catch (e) {
         console.error("Config parse error:", e);
     }
@@ -157,34 +133,60 @@ async function update() {
 
     const processor = new Processor(args, config);
     await processor.buildContext();
+    return processor;
+}
+
+function createLogLineElement(processed, raw) {
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'log-line';
+
+    const levelMatch = processed.match(/\[(INFO|WARN|ERROR|DEBUG|TRACE)\]/);
+    if (levelMatch) {
+        const level = levelMatch[1];
+        lineDiv.innerHTML = processed.replace(`[${level}]`, `<span class="pill pill-${level}">${level}</span>`);
+    } else {
+        lineDiv.textContent = processed;
+    }
+
+    lineDiv.onclick = () => {
+        let parsed = null;
+        try {
+            parsed = JSON.parse(raw);
+        } catch (e) { }
+
+        const prefix = raw.substring(0, 100) + (raw.length > 100 ? "..." : "");
+        console.log(`%cRaw Log:%c ${prefix}`, "font-weight:bold; color:#f7a41d", "color:inherit");
+        if (parsed) {
+            console.log(parsed);
+        } else {
+            console.log(raw);
+        }
+    };
+
+    return lineDiv;
+}
+
+async function update() {
+    const processor = await getProcessor();
 
     let matches = 0;
     output.innerHTML = '';
 
-    for (const line of lines) {
-        if (!line.trim()) continue;
+    for (const line of loadedLogLines) {
         const processed = processor.processLine(line);
         if (processed !== null) {
             matches++;
-            const lineDiv = document.createElement('div');
-            const levelMatch = processed.match(/\[(INFO|WARN|ERROR|DEBUG|TRACE)\]/);
-            if (levelMatch) {
-                const level = levelMatch[1];
-                lineDiv.innerHTML = processed.replace(`[${level}]`, `<span class="pill pill-${level}">${level}</span>`);
-            } else {
-                lineDiv.textContent = processed;
-            }
-            output.appendChild(lineDiv);
+            output.appendChild(createLogLineElement(processed, line));
         }
     }
 
-    matchStats.textContent = `Matched ${matches} of ${lines.length} lines`;
+    matchStats.textContent = `Matched ${matches} of ${loadedLogLines.length} lines`;
 
     // CLI update
     let cmd = 'jlx -c jlx.conf';
-    if (args.include) cmd += ` -i "${args.include}"`;
-    if (args.exclude) cmd += ` -e "${args.exclude}"`;
-    if (args.range) cmd += ` -r "${args.range}"`;
+    if (includeFilter.value) cmd += ` -i "${includeFilter.value}"`;
+    if (excludeFilter.value) cmd += ` -e "${excludeFilter.value}"`;
+    if (rangeFilter.value) cmd += ` -r "${rangeFilter.value}"`;
 
     cliCommand.textContent = cmd + ' logfile.json';
 }
@@ -200,16 +202,104 @@ fileInput.onchange = (e) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        logInput.value = e.target.result;
+        loadedLogLines = e.target.result.split('\n').filter(l => l.trim());
         update();
     };
     reader.readAsText(file);
 };
 
-[logInput, configEditor, includeFilter, excludeFilter, rangeFilter].forEach(el => {
-    el.addEventListener('input', update);
+const liveToggle = document.getElementById('liveToggle');
+const sseStatus = document.getElementById('sseStatus');
+let eventSource = null;
+
+function connectSSE() {
+    if (eventSource) {
+        eventSource.close();
+    }
+
+    const params = new URLSearchParams();
+    if (includeFilter.value) params.append('include', includeFilter.value);
+    if (excludeFilter.value) params.append('exclude', excludeFilter.value);
+    if (rangeFilter.value) {
+        params.append('range', rangeFilter.value);
+    } else {
+        params.append('range', '-50');
+    }
+    params.append('follow', 'true');
+
+    const url = `/sse?${params.toString()}`;
+    console.log('Connecting to SSE:', url);
+
+    eventSource = new EventSource(url);
+    sseStatus.style.display = 'inline-block';
+    sseStatus.textContent = 'CONNECTING...';
+    sseStatus.style.background = '#f7a41d';
+
+    eventSource.onopen = () => {
+        sseStatus.textContent = 'LIVE';
+        sseStatus.style.background = '#22c55e';
+        output.innerHTML = '';
+        matchStats.textContent = 'Live stream active';
+    };
+
+    eventSource.onmessage = async (e) => {
+        const line = e.data;
+        if (!line.trim()) return;
+
+        const processor = await getProcessor();
+        const processed = processor.processLine(line);
+        if (processed === null) return;
+
+        output.appendChild(createLogLineElement(processed, line));
+        if (autoScrollToggle.checked) {
+            output.scrollTop = output.scrollHeight;
+        }
+    };
+
+    eventSource.onerror = (err) => {
+        console.error('SSE Error:', err);
+        sseStatus.textContent = 'DISCONNECTED';
+        sseStatus.style.background = '#ef4444';
+        eventSource.close();
+    };
+}
+
+liveToggle.onchange = () => {
+    if (liveToggle.checked) {
+        connectSSE();
+    } else {
+        if (eventSource) {
+            eventSource.close();
+        }
+        sseStatus.style.display = 'none';
+        update();
+    }
+};
+
+[configEditor, includeFilter, excludeFilter, rangeFilter].forEach(el => {
+    el.addEventListener('input', () => {
+        if (liveToggle.checked) {
+            connectSSE();
+        } else {
+            update();
+        }
+    });
 });
 
+// Auto-scroll toggle manual control
+autoScrollToggle.onchange = () => {
+    if (autoScrollToggle.checked) {
+        output.scrollTop = output.scrollHeight;
+    }
+};
+
+// Handle auto-scroll state based on scroll position
+output.addEventListener('scroll', () => {
+    // Check if user is at the bottom (with 10px margin for subpixel issues)
+    const isAtBottom = output.scrollHeight - output.scrollTop <= output.clientHeight + 10;
+    autoScrollToggle.checked = isAtBottom;
+}, { passive: true });
+
 renderUI();
-tryAutoLoadSample();
+// tryAutoLoadSample();
 update();

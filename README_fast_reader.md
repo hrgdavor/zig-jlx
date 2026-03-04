@@ -10,6 +10,7 @@ When working with `takeDelimiter` or `readUntilDelimiterOrEofAlloc` from the Zig
 - **1MB Bulk Reads**: It bypasses reader chunk limitations and asks precisely for raw bytes directly out of `std.fs.File.read()`.
 - **Zero-Allocation Slicing**: As reads fill the `1MB` static bounds, `FastLineReader` drops sub-slices pointing straight to that active memory block without making standard string `alloc` copies.
 - **Dynamic Shifting instead of Freeing**: Incomplete lines bounded at the file edge aren't thrown away or merged via alloc. They're safely copied `(std.mem.copyForwards)` back to index `0` so the stream loop behaves iteratively and continuously without GC/malloc penalties.
+- **SIMD Backward Scanning**: Specifically for `follow` operations starting from the end, it performs a high-speed reverse scan to find newline offsets from the end of the file without reading from the beginning.
 - **16MB Soft-Cap Resistance**: If an extreme string chunk exists without newlines (e.g. minified payload dumps), it will instantly double the buffer to `16MB`, intercept failure seamlessly, skip chunks forward until the next `\n`, and recover the bounds gracefully — without crashing out-of-memory.
 
 ## Use Cases

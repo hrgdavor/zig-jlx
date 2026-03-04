@@ -1,24 +1,574 @@
-{"@timestamp": 1771372800000, "level": "INFO", "message": "System startup", "user_id": "system"}
-{"@timestamp": 1771376400000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
-{"@timestamp": 1771380000000, "level": "DEBUG", "message": "Cleaning cache", "user_id": "user1"}
-{"@timestamp": 1771383600000, "level": "INFO", "message": "User login", "user_id": "user2"}
-{"@timestamp": 1771387200000, "level": "ERROR", "message": "Database timeout", "user_id": "db_admin"}
-{"@timestamp": 1771390800000, "level": "INFO", "message": "Processing batch", "user_id": "user1"}
-{"@timestamp": 1771394400000, "level": "DEBUG", "message": "Metric collection", "user_id": "system"}
-{"@timestamp": 1771398000000, "level": "INFO", "message": "User logout", "user_id": "user2"}
-{"@timestamp": 1771401600000, "level": "INFO", "message": "User login", "user_id": "user3"}
-{"@timestamp": 1771405200000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
-{"@timestamp": 1771408800000, "level": "ERROR", "message": "Disk space low", "user_id": "system"}
-{"@timestamp": 1771412400000, "level": "INFO", "message": "User login", "user_id": "user4"}
-{"@timestamp": 1771416000000, "level": "INFO", "message": "Processing batch", "user_id": "user3"}
-{"@timestamp": 1771419600000, "level": "DEBUG", "message": "Cache hit optimization", "user_id": "user1"}
-{"@timestamp": 1771423200000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
-{"@timestamp": 1771426800000, "level": "ERROR", "message": "Unexpected shutdown", "user_id": "system"}
-{"@timestamp": 1771430400000, "level": "INFO", "message": "System startup", "user_id": "system"}
-{"@timestamp": 1771434000000, "level": "INFO", "message": "User login", "user_id": "user5"}
-{"@timestamp": 1771437600000, "level": "INFO", "message": "Processing batch", "user_id": "user5"}
-{"@timestamp": 1771441200000, "level": "INFO", "message": "User logout", "user_id": "user5"}
-{"@timestamp": 1771444800000, "level": "INFO", "message": "Heartbeat", "user_id": "system"}
-{"@timestamp": 1771448400000, "level": "DEBUG", "message": "Backup started", "user_id": "admin"}
-{"@timestamp": 1771452000000, "level": "INFO", "message": "Backup finished", "user_id": "admin"}
-{"@timestamp": 1771455600000, "level": "INFO", "message": "System shutdown", "user_id": "system"}
+{"ts":1772664789342,"level":"TRACE","logger":"db-handler","message":"Updated status for ticket TKT-5467: Pending","sessionId":"sess-881886","ticketId":"TKT-5467","userId":"USR-424","thread":"pool-2"}
+{"ts":1772664789343,"level":"INFO","logger":"user-api","message":"Archive operation started for ticket TKT-9692","sessionId":"sess-648510","ticketId":"TKT-9692","userId":"USR-377","thread":"pool-3"}
+{"ts":1772664790351,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-4420 to USR-337","sessionId":"sess-419765","ticketId":"TKT-4420","userId":"USR-337","thread":"pool-2"}
+{"ts":1772664790352,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-4996: Open","sessionId":"sess-648510","ticketId":"TKT-4996","userId":"USR-921","thread":"pool-2"}
+{"ts":1772664800762,"level":"TRACE","logger":"notification-manager","message":"Ticket TKT-4791 validation failed: Missing required field","sessionId":"sess-655810","ticketId":"TKT-4791","userId":"USR-442","thread":"pool-3"}
+{"ts":1772664800763,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-2053 to agent agent-4","sessionId":"sess-604948","ticketId":"TKT-2053","userId":"USR-259","thread":"pool-0"}
+{"ts":1772664801771,"level":"TRACE","logger":"auth-provider","message":"Sending notification for ticket TKT-8680 to USR-306","sessionId":"sess-709250","ticketId":"TKT-8680","userId":"USR-306","thread":"pool-1"}
+{"ts":1772664802785,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-6888: Pending","sessionId":"sess-48573","ticketId":"TKT-6888","userId":"USR-632","thread":"pool-2"}
+{"ts":1772664802785,"level":"WARN","logger":"user-api","message":"Archive operation started for ticket TKT-8826","sessionId":"sess-665190","ticketId":"TKT-8826","userId":"USR-153","thread":"pool-1"}
+{"ts":1772664803795,"level":"TRACE","logger":"user-api","message":"Fetching ticket TKT-2243","sessionId":"sess-759730","ticketId":"TKT-2243","userId":"USR-549","thread":"pool-3"}
+{"ts":1772664803795,"level":"ERROR","logger":"ticket-service","message":"Assigned ticket TKT-5241 to agent agent-2","sessionId":"sess-48573","ticketId":"TKT-5241","userId":"USR-375","thread":"pool-3"}
+{"ts":1772664804809,"level":"DEBUG","logger":"db-handler","message":"Ticket TKT-3413 validation failed: Invalid format","sessionId":"sess-138991","ticketId":"TKT-3413","userId":"USR-297","thread":"pool-2"}
+{"ts":1772664804809,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-3760","sessionId":"sess-118781","ticketId":"TKT-3760","userId":"USR-106","thread":"pool-0"}
+{"ts":1772664831423,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-1459 to agent agent-3","sessionId":"sess-631530","ticketId":"TKT-1459","userId":"USR-915","thread":"pool-1"}
+{"ts":1772664832431,"level":"WARN","logger":"user-api","message":"Archive operation started for ticket TKT-3064","sessionId":"sess-375418","ticketId":"TKT-3064","userId":"USR-716","thread":"pool-2"}
+{"ts":1772664832431,"level":"INFO","logger":"notification-manager","message":"Assigned ticket TKT-4176 to agent agent-4","sessionId":"sess-655195","ticketId":"TKT-4176","userId":"USR-905","thread":"pool-2"}
+{"ts":1772664833443,"level":"INFO","logger":"auth-provider","message":"User USR-455 commented on ticket TKT-2031","sessionId":"sess-743179","ticketId":"TKT-2031","userId":"USR-455","thread":"pool-1"}
+{"ts":1772664833443,"level":"INFO","logger":"auth-provider","message":"Assigned ticket TKT-2056 to agent agent-1","sessionId":"sess-433088","ticketId":"TKT-2056","userId":"USR-705","thread":"pool-1"}
+{"ts":1772664834455,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-7380","sessionId":"sess-689989","ticketId":"TKT-7380","userId":"USR-148","thread":"pool-2"}
+{"ts":1772664835468,"level":"ERROR","logger":"notification-manager","message":"Sending notification for ticket TKT-5713 to USR-314","sessionId":"sess-788670","ticketId":"TKT-5713","userId":"USR-314","thread":"pool-2"}
+{"ts":1772664836476,"level":"DEBUG","logger":"user-api","message":"Sending notification for ticket TKT-6062 to USR-615","sessionId":"sess-898057","ticketId":"TKT-6062","userId":"USR-615","thread":"pool-2"}
+{"ts":1772664837488,"level":"INFO","logger":"ticket-service","message":"Sending notification for ticket TKT-4905 to USR-563","sessionId":"sess-743888","ticketId":"TKT-4905","userId":"USR-563","thread":"pool-1"}
+{"ts":1772664838497,"level":"ERROR","logger":"notification-manager","message":"Updated status for ticket TKT-7096: Resolved","sessionId":"sess-689989","ticketId":"TKT-7096","userId":"USR-893","thread":"pool-0"}
+{"ts":1772664838497,"level":"INFO","logger":"auth-provider","message":"Sending notification for ticket TKT-7043 to USR-917","sessionId":"sess-766245","ticketId":"TKT-7043","userId":"USR-917","thread":"pool-0"}
+{"ts":1772664839504,"level":"WARN","logger":"user-api","message":"Assigned ticket TKT-4225 to agent agent-2","sessionId":"sess-797573","ticketId":"TKT-4225","userId":"USR-408","thread":"pool-2"}
+{"ts":1772664840519,"level":"DEBUG","logger":"user-api","message":"User USR-413 commented on ticket TKT-2248","sessionId":"sess-629877","ticketId":"TKT-2248","userId":"USR-413","thread":"pool-1"}
+{"ts":1772664841525,"level":"ERROR","logger":"notification-manager","message":"Assigned ticket TKT-1728 to agent agent-2","sessionId":"sess-37645","ticketId":"TKT-1728","userId":"USR-260","thread":"pool-2"}
+{"ts":1772664841525,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-1593","sessionId":"sess-416843","ticketId":"TKT-1593","userId":"USR-473","thread":"pool-2"}
+{"ts":1772664842528,"level":"INFO","logger":"user-api","message":"Assigned ticket TKT-5056 to agent agent-3","sessionId":"sess-655195","ticketId":"TKT-5056","userId":"USR-415","thread":"pool-3"}
+{"ts":1772664843534,"level":"TRACE","logger":"user-api","message":"Archive operation started for ticket TKT-6252","sessionId":"sess-689989","ticketId":"TKT-6252","userId":"USR-182","thread":"pool-0"}
+{"ts":1772664843535,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-5270","sessionId":"sess-743888","ticketId":"TKT-5270","userId":"USR-664","thread":"pool-1"}
+{"ts":1772664844543,"level":"WARN","logger":"ticket-service","message":"Ticket TKT-8446 validation failed: Permission denied","sessionId":"sess-78623","ticketId":"TKT-8446","userId":"USR-466","thread":"pool-1"}
+{"ts":1772664844543,"level":"WARN","logger":"ticket-service","message":"Ticket TKT-7713 validation failed: Database timeout","sessionId":"sess-743888","ticketId":"TKT-7713","userId":"USR-584","thread":"pool-3"}
+{"ts":1772664845558,"level":"WARN","logger":"ticket-service","message":"Ticket TKT-7311 validation failed: Missing required field","sessionId":"sess-629877","ticketId":"TKT-7311","userId":"USR-581","thread":"pool-0"}
+{"ts":1772664846566,"level":"WARN","logger":"db-handler","message":"Fetching ticket TKT-6199","sessionId":"sess-849795","ticketId":"TKT-6199","userId":"USR-118","thread":"pool-0"}
+{"ts":1772664847577,"level":"INFO","logger":"user-api","message":"Assigned ticket TKT-3033 to agent agent-1","sessionId":"sess-552194","ticketId":"TKT-3033","userId":"USR-676","thread":"pool-3"}
+{"ts":1772664847577,"level":"INFO","logger":"notification-manager","message":"Assigned ticket TKT-3883 to agent agent-3","sessionId":"sess-691689","ticketId":"TKT-3883","userId":"USR-924","thread":"pool-2"}
+{"ts":1772664848589,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-2308 to agent agent-1","sessionId":"sess-570210","ticketId":"TKT-2308","userId":"USR-353","thread":"pool-3"}
+{"ts":1772664848590,"level":"TRACE","logger":"ticket-service","message":"User USR-829 commented on ticket TKT-7045","sessionId":"sess-306275","ticketId":"TKT-7045","userId":"USR-829","thread":"pool-0"}
+{"ts":1772664849597,"level":"TRACE","logger":"auth-provider","message":"Archive operation started for ticket TKT-9544","sessionId":"sess-445405","ticketId":"TKT-9544","userId":"USR-873","thread":"pool-2"}
+{"ts":1772664850611,"level":"WARN","logger":"auth-provider","message":"Archive operation started for ticket TKT-6633","sessionId":"sess-66291","ticketId":"TKT-6633","userId":"USR-218","thread":"pool-0"}
+{"ts":1772664850611,"level":"ERROR","logger":"db-handler","message":"Assigned ticket TKT-9020 to agent agent-3","sessionId":"sess-300300","ticketId":"TKT-9020","userId":"USR-448","thread":"pool-3"}
+{"ts":1772664851615,"level":"INFO","logger":"ticket-service","message":"Assigned ticket TKT-2529 to agent agent-3","sessionId":"sess-544883","ticketId":"TKT-2529","userId":"USR-827","thread":"pool-0"}
+{"ts":1772664852629,"level":"DEBUG","logger":"auth-provider","message":"Fetching ticket TKT-6315","sessionId":"sess-824169","ticketId":"TKT-6315","userId":"USR-602","thread":"pool-2"}
+{"ts":1772664852629,"level":"INFO","logger":"auth-provider","message":"Fetching ticket TKT-9440","sessionId":"sess-629877","ticketId":"TKT-9440","userId":"USR-107","thread":"pool-0"}
+{"ts":1772664853638,"level":"ERROR","logger":"notification-manager","message":"Assigned ticket TKT-4610 to agent agent-3","sessionId":"sess-254228","ticketId":"TKT-4610","userId":"USR-622","thread":"pool-1"}
+{"ts":1772664854651,"level":"ERROR","logger":"notification-manager","message":"Ticket TKT-9439 validation failed: Missing required field","sessionId":"sess-433088","ticketId":"TKT-9439","userId":"USR-155","thread":"pool-2"}
+{"ts":1772664854653,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-3909","sessionId":"sess-399203","ticketId":"TKT-3909","userId":"USR-924","thread":"pool-0"}
+{"ts":1772664855650,"level":"INFO","logger":"auth-provider","message":"Fetching ticket TKT-5196","sessionId":"sess-209624","ticketId":"TKT-5196","userId":"USR-147","thread":"pool-0"}
+{"ts":1772664856657,"level":"DEBUG","logger":"ticket-service","message":"Sending notification for ticket TKT-5086 to USR-936","sessionId":"sess-300300","ticketId":"TKT-5086","userId":"USR-936","thread":"pool-0"}
+{"ts":1772664856657,"level":"TRACE","logger":"auth-provider","message":"Archive operation started for ticket TKT-3531","sessionId":"sess-552194","ticketId":"TKT-3531","userId":"USR-345","thread":"pool-0"}
+{"ts":1772664857668,"level":"INFO","logger":"db-handler","message":"Sending notification for ticket TKT-8416 to USR-441","sessionId":"sess-399203","ticketId":"TKT-8416","userId":"USR-441","thread":"pool-0"}
+{"ts":1772664857669,"level":"DEBUG","logger":"ticket-service","message":"Assigned ticket TKT-7656 to agent agent-4","sessionId":"sess-375418","ticketId":"TKT-7656","userId":"USR-428","thread":"pool-0"}
+{"ts":1772664858671,"level":"INFO","logger":"auth-provider","message":"Updated status for ticket TKT-2044: Pending","sessionId":"sess-544883","ticketId":"TKT-2044","userId":"USR-647","thread":"pool-0"}
+{"ts":1772664859684,"level":"ERROR","logger":"notification-manager","message":"Ticket TKT-7988 validation failed: Invalid format","sessionId":"sess-544883","ticketId":"TKT-7988","userId":"USR-384","thread":"pool-2"}
+{"ts":1772664859684,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-6468 to agent agent-3","sessionId":"sess-691689","ticketId":"TKT-6468","userId":"USR-503","thread":"pool-2"}
+{"ts":1772664860695,"level":"ERROR","logger":"notification-manager","message":"Sending notification for ticket TKT-2601 to USR-512","sessionId":"sess-570210","ticketId":"TKT-2601","userId":"USR-512","thread":"pool-2"}
+{"ts":1772664861701,"level":"DEBUG","logger":"notification-manager","message":"User USR-609 commented on ticket TKT-2836","sessionId":"sess-665208","ticketId":"TKT-2836","userId":"USR-609","thread":"pool-3"}
+{"ts":1772664862714,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-2960","sessionId":"sess-743888","ticketId":"TKT-2960","userId":"USR-837","thread":"pool-3"}
+{"ts":1772664862714,"level":"INFO","logger":"ticket-service","message":"Sending notification for ticket TKT-6922 to USR-605","sessionId":"sess-629877","ticketId":"TKT-6922","userId":"USR-605","thread":"pool-0"}
+{"ts":1772664863723,"level":"DEBUG","logger":"notification-manager","message":"Updated status for ticket TKT-5064: In Progress","sessionId":"sess-631530","ticketId":"TKT-5064","userId":"USR-720","thread":"pool-1"}
+{"ts":1772664864732,"level":"ERROR","logger":"db-handler","message":"Ticket TKT-9791 validation failed: Invalid format","sessionId":"sess-585391","ticketId":"TKT-9791","userId":"USR-887","thread":"pool-1"}
+{"ts":1772664865740,"level":"INFO","logger":"notification-manager","message":"Updated status for ticket TKT-5682: Closed","sessionId":"sess-504379","ticketId":"TKT-5682","userId":"USR-773","thread":"pool-3"}
+{"ts":1772664866752,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-1211","sessionId":"sess-570210","ticketId":"TKT-1211","userId":"USR-777","thread":"pool-3"}
+{"ts":1772664867765,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-2932","sessionId":"sess-711085","ticketId":"TKT-2932","userId":"USR-668","thread":"pool-3"}
+{"ts":1772664868777,"level":"ERROR","logger":"ticket-service","message":"Fetching ticket TKT-2194","sessionId":"sess-358420","ticketId":"TKT-2194","userId":"USR-851","thread":"pool-3"}
+{"ts":1772664869789,"level":"DEBUG","logger":"db-handler","message":"Updated status for ticket TKT-3368: Closed","sessionId":"sess-433088","ticketId":"TKT-3368","userId":"USR-207","thread":"pool-1"}
+{"ts":1772664869789,"level":"TRACE","logger":"ticket-service","message":"Fetching ticket TKT-6470","sessionId":"sess-797573","ticketId":"TKT-6470","userId":"USR-548","thread":"pool-0"}
+{"ts":1772664870801,"level":"WARN","logger":"db-handler","message":"Sending notification for ticket TKT-1304 to USR-270","sessionId":"sess-629877","ticketId":"TKT-1304","userId":"USR-270","thread":"pool-0"}
+{"ts":1772664870801,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-2979","sessionId":"sess-78623","ticketId":"TKT-2979","userId":"USR-244","thread":"pool-0"}
+{"ts":1772664871815,"level":"INFO","logger":"db-handler","message":"User USR-704 commented on ticket TKT-5576","sessionId":"sess-552194","ticketId":"TKT-5576","userId":"USR-704","thread":"pool-3"}
+{"ts":1772664872826,"level":"INFO","logger":"auth-provider","message":"Sending notification for ticket TKT-2735 to USR-204","sessionId":"sess-300300","ticketId":"TKT-2735","userId":"USR-204","thread":"pool-2"}
+{"ts":1772664872826,"level":"DEBUG","logger":"auth-provider","message":"Ticket TKT-2146 validation failed: Database timeout","sessionId":"sess-655195","ticketId":"TKT-2146","userId":"USR-294","thread":"pool-0"}
+{"ts":1772664873837,"level":"DEBUG","logger":"auth-provider","message":"Updated status for ticket TKT-2350: Open","sessionId":"sess-300300","ticketId":"TKT-2350","userId":"USR-752","thread":"pool-1"}
+{"ts":1772664874847,"level":"WARN","logger":"auth-provider","message":"Archive operation started for ticket TKT-4680","sessionId":"sess-743179","ticketId":"TKT-4680","userId":"USR-488","thread":"pool-2"}
+{"ts":1772664875859,"level":"DEBUG","logger":"user-api","message":"Sending notification for ticket TKT-6907 to USR-793","sessionId":"sess-743888","ticketId":"TKT-6907","userId":"USR-793","thread":"pool-3"}
+{"ts":1772664876873,"level":"INFO","logger":"ticket-service","message":"Updated status for ticket TKT-5373: Resolved","sessionId":"sess-254228","ticketId":"TKT-5373","userId":"USR-723","thread":"pool-3"}
+{"ts":1772664877882,"level":"TRACE","logger":"auth-provider","message":"Updated status for ticket TKT-2714: Open","sessionId":"sess-300300","ticketId":"TKT-2714","userId":"USR-298","thread":"pool-0"}
+{"ts":1772664877883,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-7870 to USR-622","sessionId":"sess-209624","ticketId":"TKT-7870","userId":"USR-622","thread":"pool-2"}
+{"ts":1772664878894,"level":"WARN","logger":"notification-manager","message":"Updated status for ticket TKT-3451: Closed","sessionId":"sess-433088","ticketId":"TKT-3451","userId":"USR-947","thread":"pool-0"}
+{"ts":1772664879904,"level":"ERROR","logger":"ticket-service","message":"User USR-551 commented on ticket TKT-3134","sessionId":"sess-480749","ticketId":"TKT-3134","userId":"USR-551","thread":"pool-0"}
+{"ts":1772664880917,"level":"ERROR","logger":"ticket-service","message":"Sending notification for ticket TKT-3719 to USR-815","sessionId":"sess-655195","ticketId":"TKT-3719","userId":"USR-815","thread":"pool-2"}
+{"ts":1772664880917,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-9347 to agent agent-1","sessionId":"sess-37645","ticketId":"TKT-9347","userId":"USR-274","thread":"pool-0"}
+{"ts":1772664881933,"level":"DEBUG","logger":"notification-manager","message":"Assigned ticket TKT-9767 to agent agent-1","sessionId":"sess-711085","ticketId":"TKT-9767","userId":"USR-900","thread":"pool-3"}
+{"ts":1772664881933,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-4812","sessionId":"sess-37645","ticketId":"TKT-4812","userId":"USR-985","thread":"pool-3"}
+{"ts":1772664882945,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-4072 to agent agent-3","sessionId":"sess-260474","ticketId":"TKT-4072","userId":"USR-507","thread":"pool-3"}
+{"ts":1772664883955,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-8232","sessionId":"sess-743179","ticketId":"TKT-8232","userId":"USR-675","thread":"pool-3"}
+{"ts":1772664883956,"level":"TRACE","logger":"auth-provider","message":"User USR-324 commented on ticket TKT-5483","sessionId":"sess-196335","ticketId":"TKT-5483","userId":"USR-324","thread":"pool-1"}
+{"ts":1772664884965,"level":"ERROR","logger":"notification-manager","message":"Archive operation started for ticket TKT-3154","sessionId":"sess-977975","ticketId":"TKT-3154","userId":"USR-466","thread":"pool-1"}
+{"ts":1772664884965,"level":"ERROR","logger":"auth-provider","message":"Updated status for ticket TKT-3485: Resolved","sessionId":"sess-689989","ticketId":"TKT-3485","userId":"USR-109","thread":"pool-2"}
+{"ts":1772664885965,"level":"WARN","logger":"auth-provider","message":"User USR-617 commented on ticket TKT-6883","sessionId":"sess-824169","ticketId":"TKT-6883","userId":"USR-617","thread":"pool-0"}
+{"ts":1772664885966,"level":"TRACE","logger":"auth-provider","message":"Fetching ticket TKT-1664","sessionId":"sess-480749","ticketId":"TKT-1664","userId":"USR-324","thread":"pool-2"}
+{"ts":1772664886972,"level":"TRACE","logger":"user-api","message":"Assigned ticket TKT-1263 to agent agent-3","sessionId":"sess-977975","ticketId":"TKT-1263","userId":"USR-384","thread":"pool-1"}
+{"ts":1772664887984,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-3291 to agent agent-4","sessionId":"sess-655195","ticketId":"TKT-3291","userId":"USR-908","thread":"pool-1"}
+{"ts":1772664888999,"level":"TRACE","logger":"notification-manager","message":"Archive operation started for ticket TKT-5028","sessionId":"sess-766245","ticketId":"TKT-5028","userId":"USR-399","thread":"pool-1"}
+{"ts":1772664888999,"level":"WARN","logger":"auth-provider","message":"Archive operation started for ticket TKT-6598","sessionId":"sess-410897","ticketId":"TKT-6598","userId":"USR-787","thread":"pool-2"}
+{"ts":1772664890008,"level":"TRACE","logger":"notification-manager","message":"Updated status for ticket TKT-4023: Open","sessionId":"sess-631530","ticketId":"TKT-4023","userId":"USR-157","thread":"pool-2"}
+{"ts":1772664890008,"level":"TRACE","logger":"notification-manager","message":"Fetching ticket TKT-9133","sessionId":"sess-766245","ticketId":"TKT-9133","userId":"USR-544","thread":"pool-3"}
+{"ts":1772664891020,"level":"DEBUG","logger":"auth-provider","message":"Assigned ticket TKT-4463 to agent agent-1","sessionId":"sess-816417","ticketId":"TKT-4463","userId":"USR-565","thread":"pool-1"}
+{"ts":1772664891020,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-9303","sessionId":"sess-37645","ticketId":"TKT-9303","userId":"USR-826","thread":"pool-0"}
+{"ts":1772664892033,"level":"INFO","logger":"user-api","message":"Archive operation started for ticket TKT-7090","sessionId":"sess-358420","ticketId":"TKT-7090","userId":"USR-210","thread":"pool-2"}
+{"ts":1772664893042,"level":"DEBUG","logger":"user-api","message":"Archive operation started for ticket TKT-2932","sessionId":"sess-238162","ticketId":"TKT-2932","userId":"USR-417","thread":"pool-0"}
+{"ts":1772664894053,"level":"INFO","logger":"auth-provider","message":"Assigned ticket TKT-7678 to agent agent-1","sessionId":"sess-797573","ticketId":"TKT-7678","userId":"USR-184","thread":"pool-1"}
+{"ts":1772664895056,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-9683","sessionId":"sess-655195","ticketId":"TKT-9683","userId":"USR-686","thread":"pool-1"}
+{"ts":1772664895056,"level":"ERROR","logger":"notification-manager","message":"Fetching ticket TKT-6945","sessionId":"sess-977975","ticketId":"TKT-6945","userId":"USR-510","thread":"pool-3"}
+{"ts":1772664896069,"level":"ERROR","logger":"db-handler","message":"Sending notification for ticket TKT-3373 to USR-312","sessionId":"sess-655195","ticketId":"TKT-3373","userId":"USR-312","thread":"pool-2"}
+{"ts":1772664896069,"level":"INFO","logger":"notification-manager","message":"Ticket TKT-8160 validation failed: Missing required field","sessionId":"sess-260474","ticketId":"TKT-8160","userId":"USR-329","thread":"pool-1"}
+{"ts":1772664897082,"level":"TRACE","logger":"ticket-service","message":"Fetching ticket TKT-7734","sessionId":"sess-689989","ticketId":"TKT-7734","userId":"USR-349","thread":"pool-1"}
+{"ts":1772664897082,"level":"TRACE","logger":"auth-provider","message":"Sending notification for ticket TKT-6101 to USR-824","sessionId":"sess-196335","ticketId":"TKT-6101","userId":"USR-824","thread":"pool-3"}
+{"ts":1772664898089,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-1525","sessionId":"sess-743888","ticketId":"TKT-1525","userId":"USR-133","thread":"pool-1"}
+{"ts":1772664899105,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-6962 to USR-295","sessionId":"sess-849795","ticketId":"TKT-6962","userId":"USR-295","thread":"pool-2"}
+{"ts":1772664900117,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-8104 to agent agent-1","sessionId":"sess-969792","ticketId":"TKT-8104","userId":"USR-253","thread":"pool-1"}
+{"ts":1772664901118,"level":"TRACE","logger":"user-api","message":"Sending notification for ticket TKT-1879 to USR-207","sessionId":"sess-254228","ticketId":"TKT-1879","userId":"USR-207","thread":"pool-3"}
+{"ts":1772664902129,"level":"ERROR","logger":"auth-provider","message":"Sending notification for ticket TKT-9501 to USR-670","sessionId":"sess-410897","ticketId":"TKT-9501","userId":"USR-670","thread":"pool-1"}
+{"ts":1772664902130,"level":"TRACE","logger":"db-handler","message":"User USR-259 commented on ticket TKT-3027","sessionId":"sess-969792","ticketId":"TKT-3027","userId":"USR-259","thread":"pool-3"}
+{"ts":1772664903143,"level":"ERROR","logger":"ticket-service","message":"Archive operation started for ticket TKT-9908","sessionId":"sess-977975","ticketId":"TKT-9908","userId":"USR-776","thread":"pool-0"}
+{"ts":1772664903143,"level":"ERROR","logger":"ticket-service","message":"Archive operation started for ticket TKT-1092","sessionId":"sess-544883","ticketId":"TKT-1092","userId":"USR-436","thread":"pool-2"}
+{"ts":1772664904154,"level":"INFO","logger":"auth-provider","message":"Sending notification for ticket TKT-1086 to USR-337","sessionId":"sess-544883","ticketId":"TKT-1086","userId":"USR-337","thread":"pool-3"}
+{"ts":1772664905167,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-3416 to agent agent-4","sessionId":"sess-788670","ticketId":"TKT-3416","userId":"USR-277","thread":"pool-3"}
+{"ts":1772664905168,"level":"ERROR","logger":"user-api","message":"Archive operation started for ticket TKT-7924","sessionId":"sess-849795","ticketId":"TKT-7924","userId":"USR-853","thread":"pool-0"}
+{"ts":1772664906178,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-9009","sessionId":"sess-585391","ticketId":"TKT-9009","userId":"USR-602","thread":"pool-1"}
+{"ts":1772664907183,"level":"INFO","logger":"ticket-service","message":"Archive operation started for ticket TKT-4184","sessionId":"sess-78623","ticketId":"TKT-4184","userId":"USR-492","thread":"pool-1"}
+{"ts":1772664908192,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-4355: In Progress","sessionId":"sess-196335","ticketId":"TKT-4355","userId":"USR-199","thread":"pool-3"}
+{"ts":1772664908192,"level":"ERROR","logger":"user-api","message":"Sending notification for ticket TKT-1275 to USR-628","sessionId":"sess-196335","ticketId":"TKT-1275","userId":"USR-628","thread":"pool-0"}
+{"ts":1772664909207,"level":"ERROR","logger":"auth-provider","message":"Ticket TKT-4175 validation failed: Database timeout","sessionId":"sess-209624","ticketId":"TKT-4175","userId":"USR-401","thread":"pool-2"}
+{"ts":1772664910221,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-7767","sessionId":"sess-260474","ticketId":"TKT-7767","userId":"USR-430","thread":"pool-0"}
+{"ts":1772664911223,"level":"ERROR","logger":"db-handler","message":"Fetching ticket TKT-9862","sessionId":"sess-516262","ticketId":"TKT-9862","userId":"USR-711","thread":"pool-1"}
+{"ts":1772664912237,"level":"WARN","logger":"notification-manager","message":"Archive operation started for ticket TKT-7445","sessionId":"sess-544883","ticketId":"TKT-7445","userId":"USR-919","thread":"pool-3"}
+{"ts":1772664912237,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-9113 to agent agent-1","sessionId":"sess-41947","ticketId":"TKT-9113","userId":"USR-674","thread":"pool-3"}
+{"ts":1772664913248,"level":"INFO","logger":"ticket-service","message":"Fetching ticket TKT-6938","sessionId":"sess-531638","ticketId":"TKT-6938","userId":"USR-725","thread":"pool-3"}
+{"ts":1772664914249,"level":"INFO","logger":"auth-provider","message":"Updated status for ticket TKT-3994: Resolved","sessionId":"sess-406520","ticketId":"TKT-3994","userId":"USR-146","thread":"pool-2"}
+{"ts":1772664914249,"level":"INFO","logger":"db-handler","message":"Updated status for ticket TKT-7674: In Progress","sessionId":"sess-898057","ticketId":"TKT-7674","userId":"USR-893","thread":"pool-2"}
+{"ts":1772664915259,"level":"WARN","logger":"ticket-service","message":"Updated status for ticket TKT-6860: Closed","sessionId":"sess-598886","ticketId":"TKT-6860","userId":"USR-955","thread":"pool-3"}
+{"ts":1772664915259,"level":"TRACE","logger":"db-handler","message":"Updated status for ticket TKT-9009: Open","sessionId":"sess-585391","ticketId":"TKT-9009","userId":"USR-303","thread":"pool-3"}
+{"ts":1772664980702,"level":"INFO","logger":"db-handler","message":"Archive operation started for ticket TKT-7393","sessionId":"sess-996658","ticketId":"TKT-7393","userId":"USR-252","thread":"pool-3"}
+{"ts":1772664980703,"level":"ERROR","logger":"auth-provider","message":"Archive operation started for ticket TKT-1466","sessionId":"sess-115624","ticketId":"TKT-1466","userId":"USR-650","thread":"pool-1"}
+{"ts":1772664981711,"level":"INFO","logger":"db-handler","message":"Archive operation started for ticket TKT-4782","sessionId":"sess-338775","ticketId":"TKT-4782","userId":"USR-421","thread":"pool-0"}
+{"ts":1772664982713,"level":"WARN","logger":"notification-manager","message":"Ticket TKT-3659 validation failed: Permission denied","sessionId":"sess-713929","ticketId":"TKT-3659","userId":"USR-795","thread":"pool-0"}
+{"ts":1772664982713,"level":"DEBUG","logger":"ticket-service","message":"User USR-632 commented on ticket TKT-1104","sessionId":"sess-475875","ticketId":"TKT-1104","userId":"USR-632","thread":"pool-1"}
+{"ts":1772664983716,"level":"TRACE","logger":"db-handler","message":"Assigned ticket TKT-3793 to agent agent-2","sessionId":"sess-481458","ticketId":"TKT-3793","userId":"USR-676","thread":"pool-1"}
+{"ts":1772664983717,"level":"TRACE","logger":"db-handler","message":"Assigned ticket TKT-6591 to agent agent-4","sessionId":"sess-475875","ticketId":"TKT-6591","userId":"USR-526","thread":"pool-2"}
+{"ts":1772664984729,"level":"TRACE","logger":"notification-manager","message":"Ticket TKT-7510 validation failed: Permission denied","sessionId":"sess-728880","ticketId":"TKT-7510","userId":"USR-809","thread":"pool-0"}
+{"ts":1772664985742,"level":"WARN","logger":"user-api","message":"Sending notification for ticket TKT-2094 to USR-854","sessionId":"sess-803092","ticketId":"TKT-2094","userId":"USR-854","thread":"pool-2"}
+{"ts":1772664985742,"level":"INFO","logger":"ticket-service","message":"Ticket TKT-4375 validation failed: Invalid format","sessionId":"sess-348849","ticketId":"TKT-4375","userId":"USR-227","thread":"pool-0"}
+{"ts":1772664986755,"level":"TRACE","logger":"notification-manager","message":"Assigned ticket TKT-5754 to agent agent-1","sessionId":"sess-59366","ticketId":"TKT-5754","userId":"USR-350","thread":"pool-0"}
+{"ts":1772664986756,"level":"ERROR","logger":"notification-manager","message":"Sending notification for ticket TKT-1777 to USR-643","sessionId":"sess-651635","ticketId":"TKT-1777","userId":"USR-643","thread":"pool-3"}
+{"ts":1772664987760,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-4904 to USR-452","sessionId":"sess-170862","ticketId":"TKT-4904","userId":"USR-452","thread":"pool-0"}
+{"ts":1772664988775,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-2788","sessionId":"sess-967599","ticketId":"TKT-2788","userId":"USR-729","thread":"pool-3"}
+{"ts":1772664988775,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-3612 to USR-944","sessionId":"sess-545727","ticketId":"TKT-3612","userId":"USR-944","thread":"pool-2"}
+{"ts":1772664989789,"level":"TRACE","logger":"db-handler","message":"Fetching ticket TKT-3384","sessionId":"sess-935060","ticketId":"TKT-3384","userId":"USR-698","thread":"pool-2"}
+{"ts":1772664989789,"level":"TRACE","logger":"notification-manager","message":"Archive operation started for ticket TKT-1133","sessionId":"sess-911342","ticketId":"TKT-1133","userId":"USR-904","thread":"pool-1"}
+{"ts":1772664990801,"level":"DEBUG","logger":"notification-manager","message":"User USR-749 commented on ticket TKT-3769","sessionId":"sess-8664","ticketId":"TKT-3769","userId":"USR-749","thread":"pool-3"}
+{"ts":1772664990802,"level":"DEBUG","logger":"ticket-service","message":"User USR-635 commented on ticket TKT-6313","sessionId":"sess-713929","ticketId":"TKT-6313","userId":"USR-635","thread":"pool-3"}
+{"ts":1772664991810,"level":"TRACE","logger":"user-api","message":"Fetching ticket TKT-4809","sessionId":"sess-170862","ticketId":"TKT-4809","userId":"USR-769","thread":"pool-0"}
+{"ts":1772664991810,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-5491","sessionId":"sess-594424","ticketId":"TKT-5491","userId":"USR-732","thread":"pool-2"}
+{"ts":1772664992820,"level":"TRACE","logger":"db-handler","message":"Assigned ticket TKT-4019 to agent agent-4","sessionId":"sess-862112","ticketId":"TKT-4019","userId":"USR-762","thread":"pool-1"}
+{"ts":1772664992821,"level":"ERROR","logger":"user-api","message":"Fetching ticket TKT-8234","sessionId":"sess-824587","ticketId":"TKT-8234","userId":"USR-584","thread":"pool-0"}
+{"ts":1772664993826,"level":"TRACE","logger":"db-handler","message":"Ticket TKT-2515 validation failed: Invalid format","sessionId":"sess-967599","ticketId":"TKT-2515","userId":"USR-197","thread":"pool-0"}
+{"ts":1772664993826,"level":"ERROR","logger":"notification-manager","message":"Updated status for ticket TKT-5441: Closed","sessionId":"sess-590076","ticketId":"TKT-5441","userId":"USR-602","thread":"pool-0"}
+{"ts":1772664994840,"level":"TRACE","logger":"user-api","message":"Fetching ticket TKT-7488","sessionId":"sess-445744","ticketId":"TKT-7488","userId":"USR-918","thread":"pool-2"}
+{"ts":1772664995846,"level":"ERROR","logger":"auth-provider","message":"Ticket TKT-2588 validation failed: Permission denied","sessionId":"sess-279829","ticketId":"TKT-2588","userId":"USR-763","thread":"pool-3"}
+{"ts":1772664995846,"level":"DEBUG","logger":"db-handler","message":"Updated status for ticket TKT-5915: Open","sessionId":"sess-364329","ticketId":"TKT-5915","userId":"USR-777","thread":"pool-3"}
+{"ts":1772664996860,"level":"INFO","logger":"ticket-service","message":"Updated status for ticket TKT-4016: Pending","sessionId":"sess-8664","ticketId":"TKT-4016","userId":"USR-607","thread":"pool-1"}
+{"ts":1772664996860,"level":"WARN","logger":"ticket-service","message":"Updated status for ticket TKT-5551: Open","sessionId":"sess-397667","ticketId":"TKT-5551","userId":"USR-175","thread":"pool-3"}
+{"ts":1772664997876,"level":"TRACE","logger":"user-api","message":"Updated status for ticket TKT-2811: Resolved","sessionId":"sess-21189","ticketId":"TKT-2811","userId":"USR-796","thread":"pool-2"}
+{"ts":1772664998881,"level":"DEBUG","logger":"ticket-service","message":"Sending notification for ticket TKT-8714 to USR-740","sessionId":"sess-195662","ticketId":"TKT-8714","userId":"USR-740","thread":"pool-1"}
+{"ts":1772664999889,"level":"DEBUG","logger":"notification-manager","message":"User USR-442 commented on ticket TKT-7006","sessionId":"sess-911342","ticketId":"TKT-7006","userId":"USR-442","thread":"pool-1"}
+{"ts":1772665000900,"level":"INFO","logger":"db-handler","message":"Fetching ticket TKT-8757","sessionId":"sess-445744","ticketId":"TKT-8757","userId":"USR-513","thread":"pool-2"}
+{"ts":1772665001913,"level":"INFO","logger":"auth-provider","message":"User USR-349 commented on ticket TKT-9977","sessionId":"sess-579827","ticketId":"TKT-9977","userId":"USR-349","thread":"pool-0"}
+{"ts":1772665001919,"level":"DEBUG","logger":"auth-provider","message":"Archive operation started for ticket TKT-5574","sessionId":"sess-489456","ticketId":"TKT-5574","userId":"USR-985","thread":"pool-0"}
+{"ts":1772665002923,"level":"WARN","logger":"auth-provider","message":"Ticket TKT-9390 validation failed: Permission denied","sessionId":"sess-824587","ticketId":"TKT-9390","userId":"USR-110","thread":"pool-3"}
+{"ts":1772665002923,"level":"DEBUG","logger":"db-handler","message":"Ticket TKT-9980 validation failed: Invalid format","sessionId":"sess-481458","ticketId":"TKT-9980","userId":"USR-688","thread":"pool-3"}
+{"ts":1772665003933,"level":"WARN","logger":"ticket-service","message":"Fetching ticket TKT-7516","sessionId":"sess-728880","ticketId":"TKT-7516","userId":"USR-289","thread":"pool-2"}
+{"ts":1772665004945,"level":"ERROR","logger":"db-handler","message":"Ticket TKT-6869 validation failed: Missing required field","sessionId":"sess-195662","ticketId":"TKT-6869","userId":"USR-434","thread":"pool-2"}
+{"ts":1772665004946,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-4789 to agent agent-3","sessionId":"sess-475875","ticketId":"TKT-4789","userId":"USR-919","thread":"pool-0"}
+{"ts":1772665005953,"level":"DEBUG","logger":"ticket-service","message":"Assigned ticket TKT-4897 to agent agent-1","sessionId":"sess-364329","ticketId":"TKT-4897","userId":"USR-847","thread":"pool-3"}
+{"ts":1772665006967,"level":"TRACE","logger":"ticket-service","message":"Fetching ticket TKT-2152","sessionId":"sess-812153","ticketId":"TKT-2152","userId":"USR-513","thread":"pool-0"}
+{"ts":1772665006967,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-6718 to agent agent-3","sessionId":"sess-858276","ticketId":"TKT-6718","userId":"USR-806","thread":"pool-2"}
+{"ts":1772665007962,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-6680 to agent agent-1","sessionId":"sess-684599","ticketId":"TKT-6680","userId":"USR-821","thread":"pool-2"}
+{"ts":1772665008976,"level":"WARN","logger":"notification-manager","message":"Fetching ticket TKT-5328","sessionId":"sess-125137","ticketId":"TKT-5328","userId":"USR-817","thread":"pool-2"}
+{"ts":1772665008976,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-3080 to USR-934","sessionId":"sess-87622","ticketId":"TKT-3080","userId":"USR-934","thread":"pool-2"}
+{"ts":1772665009985,"level":"WARN","logger":"user-api","message":"Updated status for ticket TKT-4776: Closed","sessionId":"sess-124988","ticketId":"TKT-4776","userId":"USR-465","thread":"pool-3"}
+{"ts":1772665010993,"level":"WARN","logger":"db-handler","message":"Ticket TKT-3026 validation failed: Missing required field","sessionId":"sess-684599","ticketId":"TKT-3026","userId":"USR-323","thread":"pool-1"}
+{"ts":1772665012003,"level":"TRACE","logger":"user-api","message":"User USR-895 commented on ticket TKT-2083","sessionId":"sess-842358","ticketId":"TKT-2083","userId":"USR-895","thread":"pool-1"}
+{"ts":1772665012993,"level":"TRACE","logger":"notification-manager","message":"Sending notification for ticket TKT-2320 to USR-807","sessionId":"sess-770626","ticketId":"TKT-2320","userId":"USR-807","thread":"pool-2"}
+{"ts":1772665012993,"level":"WARN","logger":"notification-manager","message":"Fetching ticket TKT-1763","sessionId":"sess-80929","ticketId":"TKT-1763","userId":"USR-551","thread":"pool-1"}
+{"ts":1772665013993,"level":"DEBUG","logger":"notification-manager","message":"Assigned ticket TKT-4361 to agent agent-2","sessionId":"sess-170862","ticketId":"TKT-4361","userId":"USR-111","thread":"pool-0"}
+{"ts":1772665013993,"level":"DEBUG","logger":"user-api","message":"Ticket TKT-2775 validation failed: Database timeout","sessionId":"sess-935060","ticketId":"TKT-2775","userId":"USR-266","thread":"pool-0"}
+{"ts":1772665015003,"level":"INFO","logger":"db-handler","message":"Sending notification for ticket TKT-2290 to USR-459","sessionId":"sess-967599","ticketId":"TKT-2290","userId":"USR-459","thread":"pool-2"}
+{"ts":1772665015004,"level":"DEBUG","logger":"ticket-service","message":"User USR-128 commented on ticket TKT-1785","sessionId":"sess-125137","ticketId":"TKT-1785","userId":"USR-128","thread":"pool-0"}
+{"ts":1772665016015,"level":"ERROR","logger":"user-api","message":"Ticket TKT-1373 validation failed: Permission denied","sessionId":"sess-481458","ticketId":"TKT-1373","userId":"USR-890","thread":"pool-1"}
+{"ts":1772665017024,"level":"TRACE","logger":"notification-manager","message":"Assigned ticket TKT-3866 to agent agent-4","sessionId":"sess-348849","ticketId":"TKT-3866","userId":"USR-507","thread":"pool-3"}
+{"ts":1772665017024,"level":"DEBUG","logger":"ticket-service","message":"Ticket TKT-6872 validation failed: Database timeout","sessionId":"sess-99683","ticketId":"TKT-6872","userId":"USR-959","thread":"pool-3"}
+{"ts":1772665018036,"level":"TRACE","logger":"notification-manager","message":"Archive operation started for ticket TKT-4693","sessionId":"sess-798463","ticketId":"TKT-4693","userId":"USR-300","thread":"pool-1"}
+{"ts":1772665019045,"level":"ERROR","logger":"ticket-service","message":"Updated status for ticket TKT-1595: Open","sessionId":"sess-99683","ticketId":"TKT-1595","userId":"USR-755","thread":"pool-2"}
+{"ts":1772665019045,"level":"DEBUG","logger":"ticket-service","message":"User USR-632 commented on ticket TKT-6469","sessionId":"sess-338775","ticketId":"TKT-6469","userId":"USR-632","thread":"pool-3"}
+{"ts":1772665020041,"level":"ERROR","logger":"notification-manager","message":"Ticket TKT-7456 validation failed: Missing required field","sessionId":"sess-397667","ticketId":"TKT-7456","userId":"USR-791","thread":"pool-1"}
+{"ts":1772665021052,"level":"WARN","logger":"user-api","message":"Archive operation started for ticket TKT-4294","sessionId":"sess-59366","ticketId":"TKT-4294","userId":"USR-230","thread":"pool-0"}
+{"ts":1772665022059,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-6906 to USR-795","sessionId":"sess-798463","ticketId":"TKT-6906","userId":"USR-795","thread":"pool-1"}
+{"ts":1772665023069,"level":"INFO","logger":"db-handler","message":"Updated status for ticket TKT-2581: In Progress","sessionId":"sess-475875","ticketId":"TKT-2581","userId":"USR-859","thread":"pool-2"}
+{"ts":1772665023069,"level":"TRACE","logger":"notification-manager","message":"Updated status for ticket TKT-1215: Resolved","sessionId":"sess-445744","ticketId":"TKT-1215","userId":"USR-722","thread":"pool-2"}
+{"ts":1772665024084,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-6348 to USR-578","sessionId":"sess-798463","ticketId":"TKT-6348","userId":"USR-578","thread":"pool-2"}
+{"ts":1772665024084,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-5957: Pending","sessionId":"sess-195662","ticketId":"TKT-5957","userId":"USR-946","thread":"pool-2"}
+{"ts":1772665025097,"level":"ERROR","logger":"ticket-service","message":"User USR-734 commented on ticket TKT-7905","sessionId":"sess-770626","ticketId":"TKT-7905","userId":"USR-734","thread":"pool-3"}
+{"ts":1772665025097,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-2719 to agent agent-4","sessionId":"sess-338775","ticketId":"TKT-2719","userId":"USR-871","thread":"pool-1"}
+{"ts":1772665026107,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-8959: In Progress","sessionId":"sess-481458","ticketId":"TKT-8959","userId":"USR-780","thread":"pool-3"}
+{"ts":1772665027120,"level":"WARN","logger":"notification-manager","message":"Sending notification for ticket TKT-3679 to USR-937","sessionId":"sess-115624","ticketId":"TKT-3679","userId":"USR-937","thread":"pool-0"}
+{"ts":1772665028132,"level":"TRACE","logger":"auth-provider","message":"User USR-100 commented on ticket TKT-8657","sessionId":"sess-911342","ticketId":"TKT-8657","userId":"USR-100","thread":"pool-2"}
+{"ts":1772665028132,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-8215 validation failed: Invalid format","sessionId":"sess-497553","ticketId":"TKT-8215","userId":"USR-604","thread":"pool-3"}
+{"ts":1772665029137,"level":"TRACE","logger":"user-api","message":"User USR-902 commented on ticket TKT-7131","sessionId":"sess-489456","ticketId":"TKT-7131","userId":"USR-902","thread":"pool-0"}
+{"ts":1772665030142,"level":"DEBUG","logger":"auth-provider","message":"User USR-286 commented on ticket TKT-1571","sessionId":"sess-348849","ticketId":"TKT-1571","userId":"USR-286","thread":"pool-1"}
+{"ts":1772665030142,"level":"WARN","logger":"user-api","message":"Archive operation started for ticket TKT-7024","sessionId":"sess-8664","ticketId":"TKT-7024","userId":"USR-591","thread":"pool-2"}
+{"ts":1772665031144,"level":"INFO","logger":"user-api","message":"Fetching ticket TKT-4556","sessionId":"sess-364329","ticketId":"TKT-4556","userId":"USR-258","thread":"pool-1"}
+{"ts":1772665031145,"level":"WARN","logger":"notification-manager","message":"Fetching ticket TKT-5038","sessionId":"sess-964891","ticketId":"TKT-5038","userId":"USR-257","thread":"pool-3"}
+{"ts":1772665032150,"level":"INFO","logger":"auth-provider","message":"Updated status for ticket TKT-9061: Resolved","sessionId":"sess-475875","ticketId":"TKT-9061","userId":"USR-904","thread":"pool-0"}
+{"ts":1772665033163,"level":"DEBUG","logger":"db-handler","message":"User USR-493 commented on ticket TKT-2886","sessionId":"sess-338775","ticketId":"TKT-2886","userId":"USR-493","thread":"pool-3"}
+{"ts":1772665033163,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-2285","sessionId":"sess-59366","ticketId":"TKT-2285","userId":"USR-808","thread":"pool-1"}
+{"ts":1772665034175,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-5717 to agent agent-1","sessionId":"sess-170862","ticketId":"TKT-5717","userId":"USR-461","thread":"pool-1"}
+{"ts":1772665035188,"level":"ERROR","logger":"notification-manager","message":"Ticket TKT-3567 validation failed: Invalid format","sessionId":"sess-445744","ticketId":"TKT-3567","userId":"USR-329","thread":"pool-1"}
+{"ts":1772665035188,"level":"INFO","logger":"db-handler","message":"Fetching ticket TKT-3082","sessionId":"sess-713929","ticketId":"TKT-3082","userId":"USR-162","thread":"pool-3"}
+{"ts":1772665036199,"level":"DEBUG","logger":"ticket-service","message":"Ticket TKT-2632 validation failed: Permission denied","sessionId":"sess-497553","ticketId":"TKT-2632","userId":"USR-852","thread":"pool-0"}
+{"ts":1772665037212,"level":"ERROR","logger":"db-handler","message":"Fetching ticket TKT-3846","sessionId":"sess-59366","ticketId":"TKT-3846","userId":"USR-774","thread":"pool-1"}
+{"ts":1772665038216,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-5890 to agent agent-3","sessionId":"sess-170862","ticketId":"TKT-5890","userId":"USR-148","thread":"pool-2"}
+{"ts":1772665038216,"level":"DEBUG","logger":"user-api","message":"Updated status for ticket TKT-2937: Pending","sessionId":"sess-579827","ticketId":"TKT-2937","userId":"USR-951","thread":"pool-2"}
+{"ts":1772665039227,"level":"WARN","logger":"notification-manager","message":"Archive operation started for ticket TKT-6418","sessionId":"sess-842358","ticketId":"TKT-6418","userId":"USR-530","thread":"pool-3"}
+{"ts":1772665039227,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-4094 to USR-554","sessionId":"sess-59366","ticketId":"TKT-4094","userId":"USR-554","thread":"pool-3"}
+{"ts":1772665040240,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-5392","sessionId":"sess-59366","ticketId":"TKT-5392","userId":"USR-676","thread":"pool-1"}
+{"ts":1772665040240,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-1164 to agent agent-2","sessionId":"sess-728880","ticketId":"TKT-1164","userId":"USR-812","thread":"pool-1"}
+{"ts":1772665041250,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-5991 to agent agent-1","sessionId":"sess-590076","ticketId":"TKT-5991","userId":"USR-243","thread":"pool-2"}
+{"ts":1772665041250,"level":"WARN","logger":"ticket-service","message":"Ticket TKT-8745 validation failed: Database timeout","sessionId":"sess-842358","ticketId":"TKT-8745","userId":"USR-719","thread":"pool-0"}
+{"ts":1772665042265,"level":"TRACE","logger":"user-api","message":"Ticket TKT-7820 validation failed: Permission denied","sessionId":"sess-713929","ticketId":"TKT-7820","userId":"USR-778","thread":"pool-2"}
+{"ts":1772665043267,"level":"DEBUG","logger":"user-api","message":"Archive operation started for ticket TKT-9041","sessionId":"sess-862112","ticketId":"TKT-9041","userId":"USR-414","thread":"pool-3"}
+{"ts":1772665043268,"level":"TRACE","logger":"user-api","message":"Assigned ticket TKT-6619 to agent agent-3","sessionId":"sess-243339","ticketId":"TKT-6619","userId":"USR-155","thread":"pool-0"}
+{"ts":1772665044275,"level":"ERROR","logger":"user-api","message":"User USR-278 commented on ticket TKT-9382","sessionId":"sess-135345","ticketId":"TKT-9382","userId":"USR-278","thread":"pool-0"}
+{"ts":1772665044275,"level":"ERROR","logger":"db-handler","message":"Assigned ticket TKT-9226 to agent agent-4","sessionId":"sess-911342","ticketId":"TKT-9226","userId":"USR-755","thread":"pool-3"}
+{"ts":1772665045284,"level":"ERROR","logger":"ticket-service","message":"Assigned ticket TKT-2950 to agent agent-4","sessionId":"sess-348849","ticketId":"TKT-2950","userId":"USR-940","thread":"pool-3"}
+{"ts":1772665045285,"level":"INFO","logger":"ticket-service","message":"Sending notification for ticket TKT-9632 to USR-562","sessionId":"sess-338775","ticketId":"TKT-9632","userId":"USR-562","thread":"pool-1"}
+{"ts":1772665046288,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-6968","sessionId":"sess-579827","ticketId":"TKT-6968","userId":"USR-196","thread":"pool-0"}
+{"ts":1772665047294,"level":"INFO","logger":"notification-manager","message":"Ticket TKT-6148 validation failed: Missing required field","sessionId":"sess-364329","ticketId":"TKT-6148","userId":"USR-699","thread":"pool-1"}
+{"ts":1772665048301,"level":"TRACE","logger":"db-handler","message":"User USR-906 commented on ticket TKT-8341","sessionId":"sess-170862","ticketId":"TKT-8341","userId":"USR-906","thread":"pool-0"}
+{"ts":1772665048302,"level":"WARN","logger":"db-handler","message":"User USR-451 commented on ticket TKT-7064","sessionId":"sess-651635","ticketId":"TKT-7064","userId":"USR-451","thread":"pool-3"}
+{"ts":1772665049309,"level":"DEBUG","logger":"auth-provider","message":"Fetching ticket TKT-9676","sessionId":"sess-707863","ticketId":"TKT-9676","userId":"USR-740","thread":"pool-3"}
+{"ts":1772665050317,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-3509","sessionId":"sess-481458","ticketId":"TKT-3509","userId":"USR-322","thread":"pool-1"}
+{"ts":1772665051329,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-2032","sessionId":"sess-338775","ticketId":"TKT-2032","userId":"USR-379","thread":"pool-3"}
+{"ts":1772665052340,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-3185 to agent agent-1","sessionId":"sess-737900","ticketId":"TKT-3185","userId":"USR-792","thread":"pool-3"}
+{"ts":1772665053343,"level":"TRACE","logger":"db-handler","message":"Sending notification for ticket TKT-9729 to USR-589","sessionId":"sess-803092","ticketId":"TKT-9729","userId":"USR-589","thread":"pool-3"}
+{"ts":1772665053343,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-3566","sessionId":"sess-87622","ticketId":"TKT-3566","userId":"USR-633","thread":"pool-0"}
+{"ts":1772665054350,"level":"WARN","logger":"auth-provider","message":"Ticket TKT-7481 validation failed: Invalid format","sessionId":"sess-195662","ticketId":"TKT-7481","userId":"USR-572","thread":"pool-1"}
+{"ts":1772665054350,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-6915 to agent agent-3","sessionId":"sess-364329","ticketId":"TKT-6915","userId":"USR-311","thread":"pool-2"}
+{"ts":1772665055363,"level":"DEBUG","logger":"notification-manager","message":"Fetching ticket TKT-6222","sessionId":"sess-135345","ticketId":"TKT-6222","userId":"USR-110","thread":"pool-2"}
+{"ts":1772665055363,"level":"WARN","logger":"user-api","message":"Assigned ticket TKT-7043 to agent agent-4","sessionId":"sess-318893","ticketId":"TKT-7043","userId":"USR-423","thread":"pool-2"}
+{"ts":1772665056378,"level":"DEBUG","logger":"user-api","message":"Sending notification for ticket TKT-9056 to USR-832","sessionId":"sess-964891","ticketId":"TKT-9056","userId":"USR-832","thread":"pool-3"}
+{"ts":1772665056378,"level":"INFO","logger":"db-handler","message":"Updated status for ticket TKT-5498: Resolved","sessionId":"sess-570955","ticketId":"TKT-5498","userId":"USR-550","thread":"pool-1"}
+{"ts":1772665057389,"level":"DEBUG","logger":"auth-provider","message":"Assigned ticket TKT-2724 to agent agent-3","sessionId":"sess-728880","ticketId":"TKT-2724","userId":"USR-243","thread":"pool-0"}
+{"ts":1772665058404,"level":"WARN","logger":"notification-manager","message":"User USR-287 commented on ticket TKT-6850","sessionId":"sess-338775","ticketId":"TKT-6850","userId":"USR-287","thread":"pool-2"}
+{"ts":1772665059409,"level":"TRACE","logger":"db-handler","message":"Sending notification for ticket TKT-1720 to USR-443","sessionId":"sess-770626","ticketId":"TKT-1720","userId":"USR-443","thread":"pool-0"}
+{"ts":1772665059409,"level":"ERROR","logger":"db-handler","message":"Assigned ticket TKT-3426 to agent agent-4","sessionId":"sess-651635","ticketId":"TKT-3426","userId":"USR-183","thread":"pool-3"}
+{"ts":1772665060423,"level":"WARN","logger":"auth-provider","message":"Updated status for ticket TKT-3124: Resolved","sessionId":"sess-570955","ticketId":"TKT-3124","userId":"USR-764","thread":"pool-3"}
+{"ts":1772665061436,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-2761 to agent agent-1","sessionId":"sess-445744","ticketId":"TKT-2761","userId":"USR-660","thread":"pool-2"}
+{"ts":1772665061436,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-5585","sessionId":"sess-318893","ticketId":"TKT-5585","userId":"USR-794","thread":"pool-1"}
+{"ts":1772665062447,"level":"TRACE","logger":"notification-manager","message":"Sending notification for ticket TKT-9761 to USR-862","sessionId":"sess-348849","ticketId":"TKT-9761","userId":"USR-862","thread":"pool-2"}
+{"ts":1772665062447,"level":"TRACE","logger":"notification-manager","message":"Fetching ticket TKT-5651","sessionId":"sess-475875","ticketId":"TKT-5651","userId":"USR-628","thread":"pool-1"}
+{"ts":1772665063462,"level":"DEBUG","logger":"auth-provider","message":"Ticket TKT-4558 validation failed: Database timeout","sessionId":"sess-21189","ticketId":"TKT-4558","userId":"USR-909","thread":"pool-2"}
+{"ts":1772665064470,"level":"DEBUG","logger":"notification-manager","message":"Archive operation started for ticket TKT-8509","sessionId":"sess-135345","ticketId":"TKT-8509","userId":"USR-894","thread":"pool-3"}
+{"ts":1772665065479,"level":"WARN","logger":"notification-manager","message":"Updated status for ticket TKT-3262: Resolved","sessionId":"sess-348849","ticketId":"TKT-3262","userId":"USR-470","thread":"pool-3"}
+{"ts":1772665065480,"level":"TRACE","logger":"ticket-service","message":"Archive operation started for ticket TKT-2259","sessionId":"sess-497553","ticketId":"TKT-2259","userId":"USR-883","thread":"pool-1"}
+{"ts":1772665066488,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-4544 to agent agent-4","sessionId":"sess-967599","ticketId":"TKT-4544","userId":"USR-107","thread":"pool-1"}
+{"ts":1772665067499,"level":"ERROR","logger":"ticket-service","message":"Sending notification for ticket TKT-7893 to USR-600","sessionId":"sess-343338","ticketId":"TKT-7893","userId":"USR-600","thread":"pool-0"}
+{"ts":1772665067499,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-5805 to agent agent-4","sessionId":"sess-570955","ticketId":"TKT-5805","userId":"USR-876","thread":"pool-1"}
+{"ts":1772665068504,"level":"ERROR","logger":"auth-provider","message":"Archive operation started for ticket TKT-4143","sessionId":"sess-812153","ticketId":"TKT-4143","userId":"USR-224","thread":"pool-1"}
+{"ts":1772665069517,"level":"TRACE","logger":"db-handler","message":"Assigned ticket TKT-3873 to agent agent-3","sessionId":"sess-99683","ticketId":"TKT-3873","userId":"USR-274","thread":"pool-3"}
+{"ts":1772665069517,"level":"INFO","logger":"auth-provider","message":"User USR-162 commented on ticket TKT-8663","sessionId":"sess-545727","ticketId":"TKT-8663","userId":"USR-162","thread":"pool-3"}
+{"ts":1772665070528,"level":"INFO","logger":"db-handler","message":"Fetching ticket TKT-1029","sessionId":"sess-737900","ticketId":"TKT-1029","userId":"USR-317","thread":"pool-1"}
+{"ts":1772665071537,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-8935 to agent agent-2","sessionId":"sess-21189","ticketId":"TKT-8935","userId":"USR-840","thread":"pool-2"}
+{"ts":1772665071538,"level":"TRACE","logger":"ticket-service","message":"Sending notification for ticket TKT-2863 to USR-446","sessionId":"sess-195662","ticketId":"TKT-2863","userId":"USR-446","thread":"pool-3"}
+{"ts":1772665072552,"level":"TRACE","logger":"user-api","message":"User USR-757 commented on ticket TKT-4250","sessionId":"sess-770626","ticketId":"TKT-4250","userId":"USR-757","thread":"pool-1"}
+{"ts":1772665072553,"level":"ERROR","logger":"notification-manager","message":"Fetching ticket TKT-4329","sessionId":"sess-445744","ticketId":"TKT-4329","userId":"USR-564","thread":"pool-0"}
+{"ts":1772665073558,"level":"DEBUG","logger":"ticket-service","message":"Sending notification for ticket TKT-8413 to USR-527","sessionId":"sess-824587","ticketId":"TKT-8413","userId":"USR-527","thread":"pool-0"}
+{"ts":1772665074565,"level":"DEBUG","logger":"notification-manager","message":"Archive operation started for ticket TKT-2986","sessionId":"sess-343338","ticketId":"TKT-2986","userId":"USR-724","thread":"pool-0"}
+{"ts":1772665074566,"level":"WARN","logger":"notification-manager","message":"Ticket TKT-2857 validation failed: Invalid format","sessionId":"sess-798463","ticketId":"TKT-2857","userId":"USR-295","thread":"pool-2"}
+{"ts":1772665075573,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-1932","sessionId":"sess-445744","ticketId":"TKT-1932","userId":"USR-822","thread":"pool-0"}
+{"ts":1772665075574,"level":"ERROR","logger":"user-api","message":"Sending notification for ticket TKT-6849 to USR-990","sessionId":"sess-445744","ticketId":"TKT-6849","userId":"USR-990","thread":"pool-2"}
+{"ts":1772665076585,"level":"INFO","logger":"user-api","message":"Sending notification for ticket TKT-2984 to USR-722","sessionId":"sess-348849","ticketId":"TKT-2984","userId":"USR-722","thread":"pool-2"}
+{"ts":1772665077596,"level":"WARN","logger":"ticket-service","message":"Fetching ticket TKT-8929","sessionId":"sess-21189","ticketId":"TKT-8929","userId":"USR-496","thread":"pool-1"}
+{"ts":1772665078600,"level":"WARN","logger":"notification-manager","message":"User USR-983 commented on ticket TKT-1347","sessionId":"sess-590076","ticketId":"TKT-1347","userId":"USR-983","thread":"pool-0"}
+{"ts":1772665078600,"level":"ERROR","logger":"db-handler","message":"Sending notification for ticket TKT-9876 to USR-568","sessionId":"sess-728880","ticketId":"TKT-9876","userId":"USR-568","thread":"pool-0"}
+{"ts":1772665079611,"level":"ERROR","logger":"db-handler","message":"Assigned ticket TKT-9152 to agent agent-1","sessionId":"sess-99683","ticketId":"TKT-9152","userId":"USR-430","thread":"pool-3"}
+{"ts":1772665079611,"level":"ERROR","logger":"ticket-service","message":"Ticket TKT-9671 validation failed: Database timeout","sessionId":"sess-964891","ticketId":"TKT-9671","userId":"USR-171","thread":"pool-3"}
+{"ts":1772665080617,"level":"TRACE","logger":"user-api","message":"Updated status for ticket TKT-3878: Open","sessionId":"sess-570955","ticketId":"TKT-3878","userId":"USR-363","thread":"pool-0"}
+{"ts":1772665081628,"level":"INFO","logger":"ticket-service","message":"Archive operation started for ticket TKT-1064","sessionId":"sess-99683","ticketId":"TKT-1064","userId":"USR-319","thread":"pool-0"}
+{"ts":1772665081628,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-4634 to agent agent-1","sessionId":"sess-824587","ticketId":"TKT-4634","userId":"USR-426","thread":"pool-1"}
+{"ts":1772665082635,"level":"WARN","logger":"notification-manager","message":"Assigned ticket TKT-2263 to agent agent-2","sessionId":"sess-8664","ticketId":"TKT-2263","userId":"USR-511","thread":"pool-3"}
+{"ts":1772665083646,"level":"ERROR","logger":"notification-manager","message":"User USR-636 commented on ticket TKT-5255","sessionId":"sess-570955","ticketId":"TKT-5255","userId":"USR-636","thread":"pool-1"}
+{"ts":1772665083652,"level":"WARN","logger":"auth-provider","message":"Updated status for ticket TKT-6359: Open","sessionId":"sess-737900","ticketId":"TKT-6359","userId":"USR-618","thread":"pool-2"}
+{"ts":1772665084655,"level":"TRACE","logger":"db-handler","message":"Ticket TKT-7805 validation failed: Invalid format","sessionId":"sess-348849","ticketId":"TKT-7805","userId":"USR-818","thread":"pool-1"}
+{"ts":1772665084655,"level":"WARN","logger":"auth-provider","message":"Assigned ticket TKT-1226 to agent agent-2","sessionId":"sess-115624","ticketId":"TKT-1226","userId":"USR-176","thread":"pool-1"}
+{"ts":1772665085667,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-6180 to agent agent-3","sessionId":"sess-343338","ticketId":"TKT-6180","userId":"USR-608","thread":"pool-0"}
+{"ts":1772665086679,"level":"WARN","logger":"notification-manager","message":"User USR-140 commented on ticket TKT-7124","sessionId":"sess-87622","ticketId":"TKT-7124","userId":"USR-140","thread":"pool-0"}
+{"ts":1772665087687,"level":"ERROR","logger":"ticket-service","message":"Assigned ticket TKT-5089 to agent agent-4","sessionId":"sess-80929","ticketId":"TKT-5089","userId":"USR-121","thread":"pool-0"}
+{"ts":1772665087688,"level":"DEBUG","logger":"db-handler","message":"Updated status for ticket TKT-3156: Resolved","sessionId":"sess-397667","ticketId":"TKT-3156","userId":"USR-659","thread":"pool-0"}
+{"ts":1772665088696,"level":"INFO","logger":"db-handler","message":"Fetching ticket TKT-5765","sessionId":"sess-338775","ticketId":"TKT-5765","userId":"USR-771","thread":"pool-0"}
+{"ts":1772665088697,"level":"ERROR","logger":"notification-manager","message":"Sending notification for ticket TKT-1951 to USR-886","sessionId":"sess-935060","ticketId":"TKT-1951","userId":"USR-886","thread":"pool-3"}
+{"ts":1772665089707,"level":"INFO","logger":"db-handler","message":"User USR-782 commented on ticket TKT-2482","sessionId":"sess-842358","ticketId":"TKT-2482","userId":"USR-782","thread":"pool-1"}
+{"ts":1772665089707,"level":"ERROR","logger":"auth-provider","message":"Sending notification for ticket TKT-6817 to USR-865","sessionId":"sess-364329","ticketId":"TKT-6817","userId":"USR-865","thread":"pool-2"}
+{"ts":1772665090720,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-9285","sessionId":"sess-135345","ticketId":"TKT-9285","userId":"USR-324","thread":"pool-1"}
+{"ts":1772665090720,"level":"ERROR","logger":"db-handler","message":"Updated status for ticket TKT-2286: In Progress","sessionId":"sess-475875","ticketId":"TKT-2286","userId":"USR-253","thread":"pool-1"}
+{"ts":1772665091732,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-8483","sessionId":"sess-862112","ticketId":"TKT-8483","userId":"USR-189","thread":"pool-2"}
+{"ts":1772665092740,"level":"WARN","logger":"ticket-service","message":"Updated status for ticket TKT-2314: Resolved","sessionId":"sess-124988","ticketId":"TKT-2314","userId":"USR-408","thread":"pool-0"}
+{"ts":1772665093748,"level":"DEBUG","logger":"ticket-service","message":"Fetching ticket TKT-5985","sessionId":"sess-728880","ticketId":"TKT-5985","userId":"USR-465","thread":"pool-3"}
+{"ts":1772665093748,"level":"WARN","logger":"ticket-service","message":"Updated status for ticket TKT-9278: Closed","sessionId":"sess-570955","ticketId":"TKT-9278","userId":"USR-594","thread":"pool-3"}
+{"ts":1772665094761,"level":"WARN","logger":"ticket-service","message":"Fetching ticket TKT-7387","sessionId":"sess-594424","ticketId":"TKT-7387","userId":"USR-642","thread":"pool-0"}
+{"ts":1772665095773,"level":"WARN","logger":"auth-provider","message":"Assigned ticket TKT-4200 to agent agent-1","sessionId":"sess-364329","ticketId":"TKT-4200","userId":"USR-597","thread":"pool-3"}
+{"ts":1772665096784,"level":"WARN","logger":"notification-manager","message":"Archive operation started for ticket TKT-6462","sessionId":"sess-594424","ticketId":"TKT-6462","userId":"USR-595","thread":"pool-1"}
+{"ts":1772665096784,"level":"INFO","logger":"notification-manager","message":"User USR-667 commented on ticket TKT-8178","sessionId":"sess-475875","ticketId":"TKT-8178","userId":"USR-667","thread":"pool-0"}
+{"ts":1772665097795,"level":"TRACE","logger":"db-handler","message":"Fetching ticket TKT-3810","sessionId":"sess-364329","ticketId":"TKT-3810","userId":"USR-620","thread":"pool-1"}
+{"ts":1772665097795,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-3461 validation failed: Database timeout","sessionId":"sess-858276","ticketId":"TKT-3461","userId":"USR-405","thread":"pool-3"}
+{"ts":1772665098797,"level":"INFO","logger":"ticket-service","message":"Fetching ticket TKT-5797","sessionId":"sess-87622","ticketId":"TKT-5797","userId":"USR-782","thread":"pool-1"}
+{"ts":1772665099810,"level":"TRACE","logger":"user-api","message":"Updated status for ticket TKT-5646: Closed","sessionId":"sess-445744","ticketId":"TKT-5646","userId":"USR-550","thread":"pool-0"}
+{"ts":1772665099810,"level":"DEBUG","logger":"notification-manager","message":"Fetching ticket TKT-5402","sessionId":"sess-348849","ticketId":"TKT-5402","userId":"USR-940","thread":"pool-1"}
+{"ts":1772665100818,"level":"INFO","logger":"auth-provider","message":"Fetching ticket TKT-4163","sessionId":"sess-87622","ticketId":"TKT-4163","userId":"USR-330","thread":"pool-2"}
+{"ts":1772665101829,"level":"ERROR","logger":"notification-manager","message":"Ticket TKT-5332 validation failed: Missing required field","sessionId":"sess-967599","ticketId":"TKT-5332","userId":"USR-766","thread":"pool-3"}
+{"ts":1772665101829,"level":"INFO","logger":"auth-provider","message":"Sending notification for ticket TKT-7629 to USR-624","sessionId":"sess-858276","ticketId":"TKT-7629","userId":"USR-624","thread":"pool-3"}
+{"ts":1772666757499,"level":"DEBUG","logger":"notification-manager","message":"Archive operation started for ticket TKT-8914","sessionId":"sess-740091","ticketId":"TKT-8914","userId":"USR-655","thread":"pool-1"}
+{"ts":1772666757500,"level":"ERROR","logger":"notification-manager","message":"Fetching ticket TKT-3419","sessionId":"sess-168553","ticketId":"TKT-3419","userId":"USR-122","thread":"pool-1"}
+{"ts":1772666758512,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-8757","sessionId":"sess-735320","ticketId":"TKT-8757","userId":"USR-810","thread":"pool-2"}
+{"ts":1772666758513,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-1373 to USR-531","sessionId":"sess-133460","ticketId":"TKT-1373","userId":"USR-531","thread":"pool-1"}
+{"ts":1772666759524,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-2888 to agent agent-2","sessionId":"sess-923250","ticketId":"TKT-2888","userId":"USR-424","thread":"pool-2"}
+{"ts":1772666760524,"level":"ERROR","logger":"ticket-service","message":"Updated status for ticket TKT-5871: Pending","sessionId":"sess-700668","ticketId":"TKT-5871","userId":"USR-596","thread":"pool-1"}
+{"ts":1772666760524,"level":"WARN","logger":"auth-provider","message":"Ticket TKT-5498 validation failed: Invalid format","sessionId":"sess-282245","ticketId":"TKT-5498","userId":"USR-874","thread":"pool-1"}
+{"ts":1772666761535,"level":"WARN","logger":"db-handler","message":"User USR-276 commented on ticket TKT-5926","sessionId":"sess-851266","ticketId":"TKT-5926","userId":"USR-276","thread":"pool-1"}
+{"ts":1772666761535,"level":"INFO","logger":"user-api","message":"Sending notification for ticket TKT-5753 to USR-519","sessionId":"sess-282245","ticketId":"TKT-5753","userId":"USR-519","thread":"pool-3"}
+{"ts":1772666762547,"level":"DEBUG","logger":"user-api","message":"Updated status for ticket TKT-5896: Closed","sessionId":"sess-828658","ticketId":"TKT-5896","userId":"USR-330","thread":"pool-0"}
+{"ts":1772666763557,"level":"TRACE","logger":"db-handler","message":"Archive operation started for ticket TKT-9041","sessionId":"sess-113931","ticketId":"TKT-9041","userId":"USR-476","thread":"pool-1"}
+{"ts":1772666763557,"level":"WARN","logger":"user-api","message":"Fetching ticket TKT-9647","sessionId":"sess-781023","ticketId":"TKT-9647","userId":"USR-198","thread":"pool-0"}
+{"ts":1772666764566,"level":"INFO","logger":"notification-manager","message":"User USR-717 commented on ticket TKT-7481","sessionId":"sess-158764","ticketId":"TKT-7481","userId":"USR-717","thread":"pool-2"}
+{"ts":1772666765576,"level":"WARN","logger":"db-handler","message":"Sending notification for ticket TKT-7275 to USR-205","sessionId":"sess-851266","ticketId":"TKT-7275","userId":"USR-205","thread":"pool-1"}
+{"ts":1772666766583,"level":"DEBUG","logger":"ticket-service","message":"Ticket TKT-6954 validation failed: Missing required field","sessionId":"sess-787072","ticketId":"TKT-6954","userId":"USR-541","thread":"pool-2"}
+{"ts":1772666766583,"level":"TRACE","logger":"db-handler","message":"Fetching ticket TKT-7167","sessionId":"sess-670837","ticketId":"TKT-7167","userId":"USR-161","thread":"pool-0"}
+{"ts":1772666767585,"level":"DEBUG","logger":"db-handler","message":"User USR-300 commented on ticket TKT-9060","sessionId":"sess-431552","ticketId":"TKT-9060","userId":"USR-300","thread":"pool-1"}
+{"ts":1772666767585,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-3212","sessionId":"sess-519802","ticketId":"TKT-3212","userId":"USR-512","thread":"pool-2"}
+{"ts":1772666768597,"level":"WARN","logger":"ticket-service","message":"Fetching ticket TKT-6657","sessionId":"sess-622446","ticketId":"TKT-6657","userId":"USR-200","thread":"pool-0"}
+{"ts":1772666769608,"level":"TRACE","logger":"auth-provider","message":"User USR-374 commented on ticket TKT-5296","sessionId":"sess-158764","ticketId":"TKT-5296","userId":"USR-374","thread":"pool-3"}
+{"ts":1772666770617,"level":"ERROR","logger":"db-handler","message":"Archive operation started for ticket TKT-4230","sessionId":"sess-787830","ticketId":"TKT-4230","userId":"USR-805","thread":"pool-0"}
+{"ts":1772666771630,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-4575 to USR-266","sessionId":"sess-176066","ticketId":"TKT-4575","userId":"USR-266","thread":"pool-2"}
+{"ts":1772666771630,"level":"ERROR","logger":"user-api","message":"Archive operation started for ticket TKT-6667","sessionId":"sess-304733","ticketId":"TKT-6667","userId":"USR-103","thread":"pool-0"}
+{"ts":1772666772636,"level":"ERROR","logger":"notification-manager","message":"Fetching ticket TKT-3503","sessionId":"sess-158764","ticketId":"TKT-3503","userId":"USR-428","thread":"pool-3"}
+{"ts":1772666772637,"level":"TRACE","logger":"ticket-service","message":"Updated status for ticket TKT-7158: Closed","sessionId":"sess-133460","ticketId":"TKT-7158","userId":"USR-457","thread":"pool-2"}
+{"ts":1772666773643,"level":"WARN","logger":"db-handler","message":"Fetching ticket TKT-1888","sessionId":"sess-735320","ticketId":"TKT-1888","userId":"USR-547","thread":"pool-2"}
+{"ts":1772666773643,"level":"INFO","logger":"db-handler","message":"Fetching ticket TKT-3259","sessionId":"sess-90220","ticketId":"TKT-3259","userId":"USR-501","thread":"pool-1"}
+{"ts":1772666774654,"level":"DEBUG","logger":"notification-manager","message":"Sending notification for ticket TKT-3261 to USR-812","sessionId":"sess-848903","ticketId":"TKT-3261","userId":"USR-812","thread":"pool-2"}
+{"ts":1772666774654,"level":"WARN","logger":"user-api","message":"Updated status for ticket TKT-7520: Closed","sessionId":"sess-156571","ticketId":"TKT-7520","userId":"USR-134","thread":"pool-3"}
+{"ts":1772666775659,"level":"ERROR","logger":"user-api","message":"Updated status for ticket TKT-1381: Pending","sessionId":"sess-882947","ticketId":"TKT-1381","userId":"USR-926","thread":"pool-2"}
+{"ts":1772666775660,"level":"ERROR","logger":"user-api","message":"Ticket TKT-8742 validation failed: Missing required field","sessionId":"sess-98263","ticketId":"TKT-8742","userId":"USR-810","thread":"pool-1"}
+{"ts":1772666776669,"level":"INFO","logger":"db-handler","message":"User USR-479 commented on ticket TKT-1401","sessionId":"sess-176066","ticketId":"TKT-1401","userId":"USR-479","thread":"pool-0"}
+{"ts":1772666776669,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-6143 validation failed: Permission denied","sessionId":"sess-613200","ticketId":"TKT-6143","userId":"USR-588","thread":"pool-1"}
+{"ts":1772666777678,"level":"WARN","logger":"ticket-service","message":"User USR-983 commented on ticket TKT-9139","sessionId":"sess-371215","ticketId":"TKT-9139","userId":"USR-983","thread":"pool-2"}
+{"ts":1772666777680,"level":"TRACE","logger":"auth-provider","message":"Ticket TKT-5805 validation failed: Missing required field","sessionId":"sess-468895","ticketId":"TKT-5805","userId":"USR-302","thread":"pool-3"}
+{"ts":1772666778692,"level":"ERROR","logger":"db-handler","message":"User USR-103 commented on ticket TKT-4938","sessionId":"sess-156571","ticketId":"TKT-4938","userId":"USR-103","thread":"pool-3"}
+{"ts":1772666778694,"level":"ERROR","logger":"ticket-service","message":"Ticket TKT-3267 validation failed: Permission denied","sessionId":"sess-176066","ticketId":"TKT-3267","userId":"USR-782","thread":"pool-1"}
+{"ts":1772666779706,"level":"INFO","logger":"ticket-service","message":"User USR-504 commented on ticket TKT-3227","sessionId":"sess-468895","ticketId":"TKT-3227","userId":"USR-504","thread":"pool-0"}
+{"ts":1772666780719,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-9374 validation failed: Database timeout","sessionId":"sess-214216","ticketId":"TKT-9374","userId":"USR-582","thread":"pool-1"}
+{"ts":1772666781726,"level":"TRACE","logger":"notification-manager","message":"Sending notification for ticket TKT-5642 to USR-198","sessionId":"sess-144265","ticketId":"TKT-5642","userId":"USR-198","thread":"pool-0"}
+{"ts":1772666781727,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-6701 to agent agent-2","sessionId":"sess-882947","ticketId":"TKT-6701","userId":"USR-575","thread":"pool-2"}
+{"ts":1772666782735,"level":"ERROR","logger":"auth-provider","message":"Ticket TKT-1403 validation failed: Invalid format","sessionId":"sess-828658","ticketId":"TKT-1403","userId":"USR-235","thread":"pool-0"}
+{"ts":1772666782735,"level":"INFO","logger":"user-api","message":"Archive operation started for ticket TKT-3412","sessionId":"sess-622446","ticketId":"TKT-3412","userId":"USR-161","thread":"pool-1"}
+{"ts":1772666783739,"level":"TRACE","logger":"auth-provider","message":"Assigned ticket TKT-9054 to agent agent-4","sessionId":"sess-825271","ticketId":"TKT-9054","userId":"USR-257","thread":"pool-0"}
+{"ts":1772666783739,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-4199","sessionId":"sess-168553","ticketId":"TKT-4199","userId":"USR-759","thread":"pool-0"}
+{"ts":1772666784751,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-5436","sessionId":"sess-622446","ticketId":"TKT-5436","userId":"USR-639","thread":"pool-2"}
+{"ts":1772666785760,"level":"WARN","logger":"notification-manager","message":"Fetching ticket TKT-2250","sessionId":"sess-622446","ticketId":"TKT-2250","userId":"USR-261","thread":"pool-1"}
+{"ts":1772666785760,"level":"DEBUG","logger":"auth-provider","message":"User USR-639 commented on ticket TKT-8022","sessionId":"sess-787830","ticketId":"TKT-8022","userId":"USR-639","thread":"pool-1"}
+{"ts":1772666786772,"level":"TRACE","logger":"notification-manager","message":"User USR-735 commented on ticket TKT-8890","sessionId":"sess-287151","ticketId":"TKT-8890","userId":"USR-735","thread":"pool-2"}
+{"ts":1772666787784,"level":"TRACE","logger":"auth-provider","message":"Fetching ticket TKT-4705","sessionId":"sess-124214","ticketId":"TKT-4705","userId":"USR-905","thread":"pool-1"}
+{"ts":1772666787785,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-3177","sessionId":"sess-133460","ticketId":"TKT-3177","userId":"USR-506","thread":"pool-2"}
+{"ts":1772666788794,"level":"TRACE","logger":"notification-manager","message":"Updated status for ticket TKT-6287: Closed","sessionId":"sess-670837","ticketId":"TKT-6287","userId":"USR-909","thread":"pool-1"}
+{"ts":1772666788794,"level":"INFO","logger":"auth-provider","message":"User USR-149 commented on ticket TKT-4906","sessionId":"sess-857013","ticketId":"TKT-4906","userId":"USR-149","thread":"pool-0"}
+{"ts":1772666789793,"level":"WARN","logger":"auth-provider","message":"Assigned ticket TKT-2470 to agent agent-1","sessionId":"sess-22199","ticketId":"TKT-2470","userId":"USR-765","thread":"pool-3"}
+{"ts":1772666790800,"level":"TRACE","logger":"user-api","message":"User USR-949 commented on ticket TKT-7586","sessionId":"sess-670837","ticketId":"TKT-7586","userId":"USR-949","thread":"pool-3"}
+{"ts":1772666791816,"level":"INFO","logger":"notification-manager","message":"Ticket TKT-8425 validation failed: Database timeout","sessionId":"sess-670837","ticketId":"TKT-8425","userId":"USR-948","thread":"pool-3"}
+{"ts":1772666792827,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-1663","sessionId":"sess-735320","ticketId":"TKT-1663","userId":"USR-451","thread":"pool-2"}
+{"ts":1772666792827,"level":"INFO","logger":"ticket-service","message":"Archive operation started for ticket TKT-7092","sessionId":"sess-670837","ticketId":"TKT-7092","userId":"USR-780","thread":"pool-3"}
+{"ts":1772666793838,"level":"TRACE","logger":"notification-manager","message":"Fetching ticket TKT-3654","sessionId":"sess-156571","ticketId":"TKT-3654","userId":"USR-381","thread":"pool-2"}
+{"ts":1772666793838,"level":"WARN","logger":"notification-manager","message":"Sending notification for ticket TKT-1967 to USR-736","sessionId":"sess-519802","ticketId":"TKT-1967","userId":"USR-736","thread":"pool-1"}
+{"ts":1772666794850,"level":"ERROR","logger":"ticket-service","message":"Archive operation started for ticket TKT-4154","sessionId":"sess-781023","ticketId":"TKT-4154","userId":"USR-409","thread":"pool-0"}
+{"ts":1772666794850,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-3651","sessionId":"sess-259981","ticketId":"TKT-3651","userId":"USR-609","thread":"pool-2"}
+{"ts":1772666795862,"level":"DEBUG","logger":"auth-provider","message":"Updated status for ticket TKT-6369: Closed","sessionId":"sess-953150","ticketId":"TKT-6369","userId":"USR-228","thread":"pool-3"}
+{"ts":1772666795862,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-1635 to USR-507","sessionId":"sess-613200","ticketId":"TKT-1635","userId":"USR-507","thread":"pool-2"}
+{"ts":1772666796869,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-2433 to agent agent-1","sessionId":"sess-519802","ticketId":"TKT-2433","userId":"USR-533","thread":"pool-0"}
+{"ts":1772666796870,"level":"INFO","logger":"ticket-service","message":"Sending notification for ticket TKT-2853 to USR-708","sessionId":"sess-953150","ticketId":"TKT-2853","userId":"USR-708","thread":"pool-1"}
+{"ts":1772666797875,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-4926","sessionId":"sess-825271","ticketId":"TKT-4926","userId":"USR-999","thread":"pool-2"}
+{"ts":1772666797875,"level":"ERROR","logger":"notification-manager","message":"Updated status for ticket TKT-2270: Closed","sessionId":"sess-431552","ticketId":"TKT-2270","userId":"USR-775","thread":"pool-2"}
+{"ts":1772666798891,"level":"WARN","logger":"db-handler","message":"User USR-152 commented on ticket TKT-7571","sessionId":"sess-622446","ticketId":"TKT-7571","userId":"USR-152","thread":"pool-0"}
+{"ts":1772666799901,"level":"ERROR","logger":"db-handler","message":"Sending notification for ticket TKT-2124 to USR-608","sessionId":"sess-214216","ticketId":"TKT-2124","userId":"USR-608","thread":"pool-1"}
+{"ts":1772666799902,"level":"DEBUG","logger":"ticket-service","message":"Assigned ticket TKT-7155 to agent agent-2","sessionId":"sess-528218","ticketId":"TKT-7155","userId":"USR-892","thread":"pool-2"}
+{"ts":1772666800913,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-8145 to agent agent-1","sessionId":"sess-622446","ticketId":"TKT-8145","userId":"USR-603","thread":"pool-0"}
+{"ts":1772666800913,"level":"TRACE","logger":"notification-manager","message":"Sending notification for ticket TKT-1810 to USR-964","sessionId":"sess-468895","ticketId":"TKT-1810","userId":"USR-964","thread":"pool-1"}
+{"ts":1772666801927,"level":"ERROR","logger":"ticket-service","message":"Fetching ticket TKT-1301","sessionId":"sess-282245","ticketId":"TKT-1301","userId":"USR-742","thread":"pool-0"}
+{"ts":1772666801927,"level":"ERROR","logger":"db-handler","message":"Archive operation started for ticket TKT-9773","sessionId":"sess-670812","ticketId":"TKT-9773","userId":"USR-327","thread":"pool-3"}
+{"ts":1772666802937,"level":"DEBUG","logger":"ticket-service","message":"User USR-398 commented on ticket TKT-8975","sessionId":"sess-740091","ticketId":"TKT-8975","userId":"USR-398","thread":"pool-0"}
+{"ts":1772666803947,"level":"ERROR","logger":"notification-manager","message":"Updated status for ticket TKT-7396: Closed","sessionId":"sess-444593","ticketId":"TKT-7396","userId":"USR-881","thread":"pool-1"}
+{"ts":1772666804958,"level":"TRACE","logger":"user-api","message":"Fetching ticket TKT-8177","sessionId":"sess-98263","ticketId":"TKT-8177","userId":"USR-745","thread":"pool-2"}
+{"ts":1772666805971,"level":"WARN","logger":"user-api","message":"Fetching ticket TKT-4127","sessionId":"sess-158764","ticketId":"TKT-4127","userId":"USR-595","thread":"pool-1"}
+{"ts":1772666805971,"level":"DEBUG","logger":"notification-manager","message":"Updated status for ticket TKT-6599: Closed","sessionId":"sess-622446","ticketId":"TKT-6599","userId":"USR-145","thread":"pool-2"}
+{"ts":1772666806983,"level":"DEBUG","logger":"ticket-service","message":"User USR-457 commented on ticket TKT-2012","sessionId":"sess-9075","ticketId":"TKT-2012","userId":"USR-457","thread":"pool-3"}
+{"ts":1772666806983,"level":"INFO","logger":"user-api","message":"Sending notification for ticket TKT-9404 to USR-762","sessionId":"sess-519802","ticketId":"TKT-9404","userId":"USR-762","thread":"pool-2"}
+{"ts":1772666807993,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-2502 to USR-756","sessionId":"sess-165483","ticketId":"TKT-2502","userId":"USR-756","thread":"pool-0"}
+{"ts":1772666807993,"level":"DEBUG","logger":"user-api","message":"Updated status for ticket TKT-4990: In Progress","sessionId":"sess-14681","ticketId":"TKT-4990","userId":"USR-343","thread":"pool-2"}
+{"ts":1772666809008,"level":"WARN","logger":"db-handler","message":"Sending notification for ticket TKT-6174 to USR-662","sessionId":"sess-953150","ticketId":"TKT-6174","userId":"USR-662","thread":"pool-0"}
+{"ts":1772666809008,"level":"WARN","logger":"db-handler","message":"Archive operation started for ticket TKT-5854","sessionId":"sess-22199","ticketId":"TKT-5854","userId":"USR-508","thread":"pool-1"}
+{"ts":1772666810021,"level":"TRACE","logger":"ticket-service","message":"Sending notification for ticket TKT-6725 to USR-489","sessionId":"sess-857013","ticketId":"TKT-6725","userId":"USR-489","thread":"pool-3"}
+{"ts":1772666811033,"level":"WARN","logger":"db-handler","message":"Fetching ticket TKT-2571","sessionId":"sess-953150","ticketId":"TKT-2571","userId":"USR-187","thread":"pool-2"}
+{"ts":1772666812046,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-7111","sessionId":"sess-519802","ticketId":"TKT-7111","userId":"USR-517","thread":"pool-2"}
+{"ts":1772666813057,"level":"TRACE","logger":"ticket-service","message":"Archive operation started for ticket TKT-1580","sessionId":"sess-176066","ticketId":"TKT-1580","userId":"USR-475","thread":"pool-3"}
+{"ts":1772666814064,"level":"ERROR","logger":"db-handler","message":"Ticket TKT-5951 validation failed: Permission denied","sessionId":"sess-431552","ticketId":"TKT-5951","userId":"USR-146","thread":"pool-1"}
+{"ts":1772666814065,"level":"DEBUG","logger":"user-api","message":"Assigned ticket TKT-8567 to agent agent-1","sessionId":"sess-492165","ticketId":"TKT-8567","userId":"USR-831","thread":"pool-2"}
+{"ts":1772666815080,"level":"DEBUG","logger":"user-api","message":"Sending notification for ticket TKT-2689 to USR-227","sessionId":"sess-468895","ticketId":"TKT-2689","userId":"USR-227","thread":"pool-0"}
+{"ts":1772666815080,"level":"DEBUG","logger":"notification-manager","message":"Assigned ticket TKT-5131 to agent agent-2","sessionId":"sess-371215","ticketId":"TKT-5131","userId":"USR-915","thread":"pool-2"}
+{"ts":1772666816092,"level":"INFO","logger":"db-handler","message":"User USR-263 commented on ticket TKT-6805","sessionId":"sess-882947","ticketId":"TKT-6805","userId":"USR-263","thread":"pool-1"}
+{"ts":1772666816092,"level":"WARN","logger":"notification-manager","message":"Archive operation started for ticket TKT-8983","sessionId":"sess-735320","ticketId":"TKT-8983","userId":"USR-499","thread":"pool-3"}
+{"ts":1772666817106,"level":"INFO","logger":"notification-manager","message":"Ticket TKT-8757 validation failed: Permission denied","sessionId":"sess-781023","ticketId":"TKT-8757","userId":"USR-201","thread":"pool-2"}
+{"ts":1772666818116,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-7304 validation failed: Permission denied","sessionId":"sess-287151","ticketId":"TKT-7304","userId":"USR-617","thread":"pool-3"}
+{"ts":1772666819130,"level":"ERROR","logger":"user-api","message":"Archive operation started for ticket TKT-5791","sessionId":"sess-165483","ticketId":"TKT-5791","userId":"USR-839","thread":"pool-3"}
+{"ts":1772666819130,"level":"ERROR","logger":"user-api","message":"User USR-187 commented on ticket TKT-2440","sessionId":"sess-848903","ticketId":"TKT-2440","userId":"USR-187","thread":"pool-2"}
+{"ts":1772666820145,"level":"INFO","logger":"auth-provider","message":"User USR-352 commented on ticket TKT-8819","sessionId":"sess-528218","ticketId":"TKT-8819","userId":"USR-352","thread":"pool-0"}
+{"ts":1772666821152,"level":"ERROR","logger":"notification-manager","message":"Archive operation started for ticket TKT-7319","sessionId":"sess-371215","ticketId":"TKT-7319","userId":"USR-106","thread":"pool-2"}
+{"ts":1772666821153,"level":"ERROR","logger":"notification-manager","message":"Assigned ticket TKT-7294 to agent agent-2","sessionId":"sess-124214","ticketId":"TKT-7294","userId":"USR-599","thread":"pool-0"}
+{"ts":1772666822167,"level":"WARN","logger":"user-api","message":"Assigned ticket TKT-8095 to agent agent-1","sessionId":"sess-113700","ticketId":"TKT-8095","userId":"USR-850","thread":"pool-3"}
+{"ts":1772666822168,"level":"WARN","logger":"user-api","message":"Ticket TKT-5823 validation failed: Missing required field","sessionId":"sess-431552","ticketId":"TKT-5823","userId":"USR-685","thread":"pool-2"}
+{"ts":1772666823174,"level":"ERROR","logger":"ticket-service","message":"Fetching ticket TKT-2052","sessionId":"sess-848903","ticketId":"TKT-2052","userId":"USR-123","thread":"pool-0"}
+{"ts":1772666823179,"level":"TRACE","logger":"ticket-service","message":"Fetching ticket TKT-4969","sessionId":"sess-282245","ticketId":"TKT-4969","userId":"USR-389","thread":"pool-1"}
+{"ts":1772666824190,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-1411 to agent agent-3","sessionId":"sess-882947","ticketId":"TKT-1411","userId":"USR-595","thread":"pool-1"}
+{"ts":1772666824190,"level":"INFO","logger":"user-api","message":"Ticket TKT-2518 validation failed: Permission denied","sessionId":"sess-9075","ticketId":"TKT-2518","userId":"USR-881","thread":"pool-0"}
+{"ts":1772666825200,"level":"TRACE","logger":"user-api","message":"Archive operation started for ticket TKT-5726","sessionId":"sess-22199","ticketId":"TKT-5726","userId":"USR-298","thread":"pool-0"}
+{"ts":1772666826209,"level":"INFO","logger":"ticket-service","message":"Fetching ticket TKT-7588","sessionId":"sess-787830","ticketId":"TKT-7588","userId":"USR-166","thread":"pool-1"}
+{"ts":1772666826209,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-6886 to agent agent-1","sessionId":"sess-519802","ticketId":"TKT-6886","userId":"USR-957","thread":"pool-0"}
+{"ts":1772666827215,"level":"WARN","logger":"ticket-service","message":"Assigned ticket TKT-9280 to agent agent-4","sessionId":"sess-781023","ticketId":"TKT-9280","userId":"USR-279","thread":"pool-0"}
+{"ts":1772666827216,"level":"TRACE","logger":"user-api","message":"Assigned ticket TKT-8004 to agent agent-2","sessionId":"sess-700668","ticketId":"TKT-8004","userId":"USR-705","thread":"pool-1"}
+{"ts":1772666828226,"level":"WARN","logger":"ticket-service","message":"Updated status for ticket TKT-9712: Open","sessionId":"sess-735320","ticketId":"TKT-9712","userId":"USR-975","thread":"pool-3"}
+{"ts":1772666829237,"level":"TRACE","logger":"db-handler","message":"Archive operation started for ticket TKT-7506","sessionId":"sess-923250","ticketId":"TKT-7506","userId":"USR-735","thread":"pool-1"}
+{"ts":1772666829238,"level":"INFO","logger":"notification-manager","message":"Sending notification for ticket TKT-5089 to USR-807","sessionId":"sess-431552","ticketId":"TKT-5089","userId":"USR-807","thread":"pool-1"}
+{"ts":1772666830245,"level":"INFO","logger":"user-api","message":"Archive operation started for ticket TKT-6270","sessionId":"sess-124214","ticketId":"TKT-6270","userId":"USR-910","thread":"pool-1"}
+{"ts":1772666831255,"level":"WARN","logger":"db-handler","message":"Assigned ticket TKT-6364 to agent agent-3","sessionId":"sess-670812","ticketId":"TKT-6364","userId":"USR-905","thread":"pool-2"}
+{"ts":1772666831256,"level":"TRACE","logger":"db-handler","message":"Updated status for ticket TKT-6255: Closed","sessionId":"sess-113931","ticketId":"TKT-6255","userId":"USR-174","thread":"pool-1"}
+{"ts":1772666832263,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-6188","sessionId":"sess-214216","ticketId":"TKT-6188","userId":"USR-810","thread":"pool-1"}
+{"ts":1772666832263,"level":"ERROR","logger":"auth-provider","message":"User USR-200 commented on ticket TKT-7623","sessionId":"sess-259981","ticketId":"TKT-7623","userId":"USR-200","thread":"pool-3"}
+{"ts":1772666833263,"level":"DEBUG","logger":"ticket-service","message":"Ticket TKT-7751 validation failed: Invalid format","sessionId":"sess-468895","ticketId":"TKT-7751","userId":"USR-358","thread":"pool-0"}
+{"ts":1772666834276,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-7784","sessionId":"sess-304733","ticketId":"TKT-7784","userId":"USR-266","thread":"pool-3"}
+{"ts":1772666834277,"level":"INFO","logger":"user-api","message":"Sending notification for ticket TKT-4358 to USR-178","sessionId":"sess-953150","ticketId":"TKT-4358","userId":"USR-178","thread":"pool-1"}
+{"ts":1772666835288,"level":"WARN","logger":"auth-provider","message":"Assigned ticket TKT-1701 to agent agent-3","sessionId":"sess-882947","ticketId":"TKT-1701","userId":"USR-785","thread":"pool-2"}
+{"ts":1772666836297,"level":"TRACE","logger":"notification-manager","message":"Ticket TKT-2501 validation failed: Permission denied","sessionId":"sess-848903","ticketId":"TKT-2501","userId":"USR-672","thread":"pool-2"}
+{"ts":1772666837304,"level":"WARN","logger":"auth-provider","message":"Fetching ticket TKT-8522","sessionId":"sess-259981","ticketId":"TKT-8522","userId":"USR-407","thread":"pool-2"}
+{"ts":1772666838314,"level":"ERROR","logger":"user-api","message":"Assigned ticket TKT-1682 to agent agent-3","sessionId":"sess-743801","ticketId":"TKT-1682","userId":"USR-103","thread":"pool-0"}
+{"ts":1772666839323,"level":"TRACE","logger":"db-handler","message":"Fetching ticket TKT-5950","sessionId":"sess-282245","ticketId":"TKT-5950","userId":"USR-287","thread":"pool-0"}
+{"ts":1772666839323,"level":"INFO","logger":"user-api","message":"Assigned ticket TKT-9326 to agent agent-2","sessionId":"sess-787072","ticketId":"TKT-9326","userId":"USR-916","thread":"pool-0"}
+{"ts":1772666840335,"level":"ERROR","logger":"user-api","message":"Ticket TKT-1334 validation failed: Permission denied","sessionId":"sess-670837","ticketId":"TKT-1334","userId":"USR-552","thread":"pool-1"}
+{"ts":1772666841341,"level":"DEBUG","logger":"db-handler","message":"Assigned ticket TKT-9045 to agent agent-4","sessionId":"sess-304733","ticketId":"TKT-9045","userId":"USR-513","thread":"pool-0"}
+{"ts":1772666842342,"level":"INFO","logger":"user-api","message":"User USR-520 commented on ticket TKT-5380","sessionId":"sess-953150","ticketId":"TKT-5380","userId":"USR-520","thread":"pool-3"}
+{"ts":1772666842342,"level":"WARN","logger":"notification-manager","message":"Updated status for ticket TKT-1528: Resolved","sessionId":"sess-923250","ticketId":"TKT-1528","userId":"USR-854","thread":"pool-2"}
+{"ts":1772666843348,"level":"DEBUG","logger":"notification-manager","message":"User USR-452 commented on ticket TKT-7525","sessionId":"sess-176066","ticketId":"TKT-7525","userId":"USR-452","thread":"pool-2"}
+{"ts":1772666844351,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-5269 validation failed: Permission denied","sessionId":"sess-670812","ticketId":"TKT-5269","userId":"USR-397","thread":"pool-2"}
+{"ts":1772666844351,"level":"WARN","logger":"notification-manager","message":"User USR-647 commented on ticket TKT-2123","sessionId":"sess-622446","ticketId":"TKT-2123","userId":"USR-647","thread":"pool-3"}
+{"ts":1772666845355,"level":"WARN","logger":"notification-manager","message":"Updated status for ticket TKT-6117: In Progress","sessionId":"sess-176066","ticketId":"TKT-6117","userId":"USR-241","thread":"pool-3"}
+{"ts":1772666846367,"level":"ERROR","logger":"auth-provider","message":"Sending notification for ticket TKT-6427 to USR-809","sessionId":"sess-282245","ticketId":"TKT-6427","userId":"USR-809","thread":"pool-1"}
+{"ts":1772666846368,"level":"WARN","logger":"user-api","message":"Assigned ticket TKT-5390 to agent agent-1","sessionId":"sess-259981","ticketId":"TKT-5390","userId":"USR-449","thread":"pool-1"}
+{"ts":1772666847382,"level":"INFO","logger":"ticket-service","message":"Assigned ticket TKT-6081 to agent agent-4","sessionId":"sess-492165","ticketId":"TKT-6081","userId":"USR-517","thread":"pool-1"}
+{"ts":1772666847383,"level":"INFO","logger":"notification-manager","message":"User USR-934 commented on ticket TKT-8700","sessionId":"sess-613200","ticketId":"TKT-8700","userId":"USR-934","thread":"pool-3"}
+{"ts":1772666848387,"level":"DEBUG","logger":"ticket-service","message":"Assigned ticket TKT-6941 to agent agent-1","sessionId":"sess-781023","ticketId":"TKT-6941","userId":"USR-280","thread":"pool-2"}
+{"ts":1772666849393,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-1508 validation failed: Database timeout","sessionId":"sess-168553","ticketId":"TKT-1508","userId":"USR-721","thread":"pool-1"}
+{"ts":1772666850403,"level":"DEBUG","logger":"ticket-service","message":"Ticket TKT-8639 validation failed: Missing required field","sessionId":"sess-444593","ticketId":"TKT-8639","userId":"USR-896","thread":"pool-3"}
+{"ts":1772666850403,"level":"ERROR","logger":"db-handler","message":"Fetching ticket TKT-8613","sessionId":"sess-519802","ticketId":"TKT-8613","userId":"USR-654","thread":"pool-1"}
+{"ts":1772666851411,"level":"DEBUG","logger":"notification-manager","message":"Updated status for ticket TKT-2176: Resolved","sessionId":"sess-735320","ticketId":"TKT-2176","userId":"USR-381","thread":"pool-3"}
+{"ts":1772666852421,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-5183 to agent agent-3","sessionId":"sess-828658","ticketId":"TKT-5183","userId":"USR-289","thread":"pool-1"}
+{"ts":1772666852421,"level":"DEBUG","logger":"db-handler","message":"User USR-266 commented on ticket TKT-7758","sessionId":"sess-124214","ticketId":"TKT-7758","userId":"USR-266","thread":"pool-2"}
+{"ts":1772666853431,"level":"DEBUG","logger":"auth-provider","message":"Archive operation started for ticket TKT-3832","sessionId":"sess-622446","ticketId":"TKT-3832","userId":"USR-623","thread":"pool-0"}
+{"ts":1772666854443,"level":"DEBUG","logger":"db-handler","message":"Ticket TKT-4230 validation failed: Database timeout","sessionId":"sess-304733","ticketId":"TKT-4230","userId":"USR-639","thread":"pool-2"}
+{"ts":1772666855453,"level":"WARN","logger":"auth-provider","message":"User USR-891 commented on ticket TKT-6392","sessionId":"sess-828658","ticketId":"TKT-6392","userId":"USR-891","thread":"pool-3"}
+{"ts":1772666856461,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-8368 validation failed: Database timeout","sessionId":"sess-287151","ticketId":"TKT-8368","userId":"USR-394","thread":"pool-2"}
+{"ts":1772666856462,"level":"WARN","logger":"db-handler","message":"Archive operation started for ticket TKT-2969","sessionId":"sess-431552","ticketId":"TKT-2969","userId":"USR-657","thread":"pool-2"}
+{"ts":1772666857470,"level":"DEBUG","logger":"notification-manager","message":"User USR-941 commented on ticket TKT-2349","sessionId":"sess-492165","ticketId":"TKT-2349","userId":"USR-941","thread":"pool-1"}
+{"ts":1772666858482,"level":"INFO","logger":"auth-provider","message":"Assigned ticket TKT-8840 to agent agent-4","sessionId":"sess-851266","ticketId":"TKT-8840","userId":"USR-937","thread":"pool-1"}
+{"ts":1772666858482,"level":"DEBUG","logger":"auth-provider","message":"Fetching ticket TKT-2240","sessionId":"sess-787072","ticketId":"TKT-2240","userId":"USR-613","thread":"pool-2"}
+{"ts":1772666859492,"level":"INFO","logger":"auth-provider","message":"Assigned ticket TKT-5683 to agent agent-3","sessionId":"sess-848903","ticketId":"TKT-5683","userId":"USR-513","thread":"pool-2"}
+{"ts":1772666859492,"level":"WARN","logger":"db-handler","message":"User USR-528 commented on ticket TKT-7345","sessionId":"sess-882947","ticketId":"TKT-7345","userId":"USR-528","thread":"pool-0"}
+{"ts":1772666860507,"level":"WARN","logger":"user-api","message":"Fetching ticket TKT-4242","sessionId":"sess-287151","ticketId":"TKT-4242","userId":"USR-432","thread":"pool-0"}
+{"ts":1772666861521,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-2123","sessionId":"sess-670812","ticketId":"TKT-2123","userId":"USR-294","thread":"pool-0"}
+{"ts":1772666861521,"level":"WARN","logger":"user-api","message":"Archive operation started for ticket TKT-6526","sessionId":"sess-467406","ticketId":"TKT-6526","userId":"USR-427","thread":"pool-3"}
+{"ts":1772666862537,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-2689","sessionId":"sess-282245","ticketId":"TKT-2689","userId":"USR-138","thread":"pool-3"}
+{"ts":1772666862537,"level":"WARN","logger":"auth-provider","message":"Archive operation started for ticket TKT-1849","sessionId":"sess-165483","ticketId":"TKT-1849","userId":"USR-982","thread":"pool-1"}
+{"ts":1772666863548,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-6396: Resolved","sessionId":"sess-740091","ticketId":"TKT-6396","userId":"USR-380","thread":"pool-3"}
+{"ts":1772666863548,"level":"TRACE","logger":"auth-provider","message":"Ticket TKT-3981 validation failed: Database timeout","sessionId":"sess-715074","ticketId":"TKT-3981","userId":"USR-957","thread":"pool-2"}
+{"ts":1772666864562,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-4991","sessionId":"sess-467406","ticketId":"TKT-4991","userId":"USR-295","thread":"pool-2"}
+{"ts":1772666864562,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-9241 validation failed: Invalid format","sessionId":"sess-165483","ticketId":"TKT-9241","userId":"USR-335","thread":"pool-1"}
+{"ts":1772666865575,"level":"TRACE","logger":"db-handler","message":"Updated status for ticket TKT-7796: Pending","sessionId":"sess-825271","ticketId":"TKT-7796","userId":"USR-910","thread":"pool-2"}
+{"ts":1772666866588,"level":"WARN","logger":"user-api","message":"Ticket TKT-1275 validation failed: Missing required field","sessionId":"sess-144265","ticketId":"TKT-1275","userId":"USR-816","thread":"pool-1"}
+{"ts":1772666866588,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-1623","sessionId":"sess-165483","ticketId":"TKT-1623","userId":"USR-343","thread":"pool-1"}
+{"ts":1772666867597,"level":"ERROR","logger":"db-handler","message":"Fetching ticket TKT-2589","sessionId":"sess-214216","ticketId":"TKT-2589","userId":"USR-153","thread":"pool-2"}
+{"ts":1772666868605,"level":"INFO","logger":"notification-manager","message":"Updated status for ticket TKT-6427: Pending","sessionId":"sess-144265","ticketId":"TKT-6427","userId":"USR-482","thread":"pool-1"}
+{"ts":1772666869608,"level":"WARN","logger":"notification-manager","message":"User USR-259 commented on ticket TKT-6490","sessionId":"sess-787830","ticketId":"TKT-6490","userId":"USR-259","thread":"pool-0"}
+{"ts":1772666869608,"level":"DEBUG","logger":"user-api","message":"Fetching ticket TKT-2438","sessionId":"sess-98263","ticketId":"TKT-2438","userId":"USR-202","thread":"pool-3"}
+{"ts":1772666870623,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-4037","sessionId":"sess-468895","ticketId":"TKT-4037","userId":"USR-830","thread":"pool-0"}
+{"ts":1772666870624,"level":"TRACE","logger":"ticket-service","message":"User USR-977 commented on ticket TKT-3473","sessionId":"sess-820056","ticketId":"TKT-3473","userId":"USR-977","thread":"pool-3"}
+{"ts":1772666871633,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-9188","sessionId":"sess-282245","ticketId":"TKT-9188","userId":"USR-884","thread":"pool-1"}
+{"ts":1772666872644,"level":"DEBUG","logger":"user-api","message":"User USR-864 commented on ticket TKT-7008","sessionId":"sess-851266","ticketId":"TKT-7008","userId":"USR-864","thread":"pool-0"}
+{"ts":1772666872644,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-8953 to USR-994","sessionId":"sess-158764","ticketId":"TKT-8953","userId":"USR-994","thread":"pool-2"}
+{"ts":1772666873649,"level":"ERROR","logger":"db-handler","message":"Updated status for ticket TKT-8102: Open","sessionId":"sess-158764","ticketId":"TKT-8102","userId":"USR-557","thread":"pool-0"}
+{"ts":1772666874660,"level":"TRACE","logger":"ticket-service","message":"Updated status for ticket TKT-8844: Closed","sessionId":"sess-781023","ticketId":"TKT-8844","userId":"USR-936","thread":"pool-0"}
+{"ts":1772666875668,"level":"WARN","logger":"notification-manager","message":"Fetching ticket TKT-2457","sessionId":"sess-133460","ticketId":"TKT-2457","userId":"USR-848","thread":"pool-0"}
+{"ts":1772666876683,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-1639","sessionId":"sess-857013","ticketId":"TKT-1639","userId":"USR-825","thread":"pool-1"}
+{"ts":1772666876683,"level":"DEBUG","logger":"auth-provider","message":"Sending notification for ticket TKT-3799 to USR-536","sessionId":"sess-467406","ticketId":"TKT-3799","userId":"USR-536","thread":"pool-2"}
+{"ts":1772666877696,"level":"TRACE","logger":"user-api","message":"Ticket TKT-9725 validation failed: Permission denied","sessionId":"sess-90220","ticketId":"TKT-9725","userId":"USR-810","thread":"pool-2"}
+{"ts":1772666878708,"level":"WARN","logger":"db-handler","message":"Updated status for ticket TKT-2032: Open","sessionId":"sess-144265","ticketId":"TKT-2032","userId":"USR-424","thread":"pool-3"}
+{"ts":1772666878708,"level":"TRACE","logger":"db-handler","message":"Sending notification for ticket TKT-7490 to USR-335","sessionId":"sess-851266","ticketId":"TKT-7490","userId":"USR-335","thread":"pool-1"}
+{"ts":1772666879721,"level":"INFO","logger":"db-handler","message":"Assigned ticket TKT-5442 to agent agent-1","sessionId":"sess-622446","ticketId":"TKT-5442","userId":"USR-418","thread":"pool-2"}
+{"ts":1772666880728,"level":"INFO","logger":"ticket-service","message":"Updated status for ticket TKT-3453: Closed","sessionId":"sess-90220","ticketId":"TKT-3453","userId":"USR-795","thread":"pool-3"}
+{"ts":1772666880728,"level":"ERROR","logger":"db-handler","message":"Fetching ticket TKT-7498","sessionId":"sess-133460","ticketId":"TKT-7498","userId":"USR-207","thread":"pool-0"}
+{"ts":1772666881738,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-3868","sessionId":"sess-431552","ticketId":"TKT-3868","userId":"USR-261","thread":"pool-2"}
+{"ts":1772666882742,"level":"WARN","logger":"ticket-service","message":"User USR-954 commented on ticket TKT-4544","sessionId":"sess-287151","ticketId":"TKT-4544","userId":"USR-954","thread":"pool-0"}
+{"ts":1772666882742,"level":"ERROR","logger":"db-handler","message":"Updated status for ticket TKT-9137: In Progress","sessionId":"sess-144265","ticketId":"TKT-9137","userId":"USR-110","thread":"pool-3"}
+{"ts":1772666883756,"level":"WARN","logger":"ticket-service","message":"Sending notification for ticket TKT-3479 to USR-447","sessionId":"sess-22199","ticketId":"TKT-3479","userId":"USR-447","thread":"pool-3"}
+{"ts":1772666884768,"level":"TRACE","logger":"auth-provider","message":"Updated status for ticket TKT-1277: Pending","sessionId":"sess-22199","ticketId":"TKT-1277","userId":"USR-276","thread":"pool-2"}
+{"ts":1772666884769,"level":"INFO","logger":"notification-manager","message":"Assigned ticket TKT-9114 to agent agent-4","sessionId":"sess-613200","ticketId":"TKT-9114","userId":"USR-832","thread":"pool-3"}
+{"ts":1772666885779,"level":"ERROR","logger":"ticket-service","message":"Fetching ticket TKT-7988","sessionId":"sess-953150","ticketId":"TKT-7988","userId":"USR-923","thread":"pool-3"}
+{"ts":1772666885779,"level":"ERROR","logger":"auth-provider","message":"Fetching ticket TKT-2653","sessionId":"sess-214216","ticketId":"TKT-2653","userId":"USR-696","thread":"pool-3"}
+{"ts":1772667103896,"level":"TRACE","logger":"ticket-service","message":"Updated status for ticket TKT-4841: Closed","sessionId":"sess-314328","ticketId":"TKT-4841","userId":"USR-192","thread":"pool-1"}
+{"ts":1772667104907,"level":"WARN","logger":"db-handler","message":"Archive operation started for ticket TKT-2037","sessionId":"sess-264645","ticketId":"TKT-2037","userId":"USR-100","thread":"pool-3"}
+{"ts":1772667104907,"level":"INFO","logger":"auth-provider","message":"Sending notification for ticket TKT-9535 to USR-694","sessionId":"sess-399983","ticketId":"TKT-9535","userId":"USR-694","thread":"pool-2"}
+{"ts":1772667105920,"level":"WARN","logger":"db-handler","message":"Ticket TKT-5728 validation failed: Database timeout","sessionId":"sess-957412","ticketId":"TKT-5728","userId":"USR-841","thread":"pool-0"}
+{"ts":1772667105920,"level":"WARN","logger":"user-api","message":"Fetching ticket TKT-6718","sessionId":"sess-806844","ticketId":"TKT-6718","userId":"USR-621","thread":"pool-1"}
+{"ts":1772667106930,"level":"TRACE","logger":"user-api","message":"Fetching ticket TKT-3918","sessionId":"sess-569834","ticketId":"TKT-3918","userId":"USR-667","thread":"pool-0"}
+{"ts":1772667107936,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-4043 to USR-511","sessionId":"sess-92476","ticketId":"TKT-4043","userId":"USR-511","thread":"pool-3"}
+{"ts":1772667108944,"level":"TRACE","logger":"ticket-service","message":"Assigned ticket TKT-9131 to agent agent-1","sessionId":"sess-989164","ticketId":"TKT-9131","userId":"USR-424","thread":"pool-0"}
+{"ts":1772667108944,"level":"TRACE","logger":"notification-manager","message":"Archive operation started for ticket TKT-3983","sessionId":"sess-806844","ticketId":"TKT-3983","userId":"USR-586","thread":"pool-0"}
+{"ts":1772667109956,"level":"INFO","logger":"db-handler","message":"User USR-358 commented on ticket TKT-5274","sessionId":"sess-360674","ticketId":"TKT-5274","userId":"USR-358","thread":"pool-3"}
+{"ts":1772667109956,"level":"DEBUG","logger":"notification-manager","message":"Assigned ticket TKT-4340 to agent agent-3","sessionId":"sess-980374","ticketId":"TKT-4340","userId":"USR-130","thread":"pool-1"}
+{"ts":1772667110967,"level":"INFO","logger":"ticket-service","message":"Archive operation started for ticket TKT-5163","sessionId":"sess-134831","ticketId":"TKT-5163","userId":"USR-598","thread":"pool-2"}
+{"ts":1772667110968,"level":"ERROR","logger":"ticket-service","message":"Assigned ticket TKT-2895 to agent agent-1","sessionId":"sess-569834","ticketId":"TKT-2895","userId":"USR-678","thread":"pool-2"}
+{"ts":1772667111978,"level":"TRACE","logger":"db-handler","message":"Archive operation started for ticket TKT-5253","sessionId":"sess-703963","ticketId":"TKT-5253","userId":"USR-857","thread":"pool-3"}
+{"ts":1772667111978,"level":"INFO","logger":"auth-provider","message":"Archive operation started for ticket TKT-5882","sessionId":"sess-385307","ticketId":"TKT-5882","userId":"USR-391","thread":"pool-2"}
+{"ts":1772667112988,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-6023","sessionId":"sess-980374","ticketId":"TKT-6023","userId":"USR-250","thread":"pool-2"}
+{"ts":1772667113988,"level":"WARN","logger":"notification-manager","message":"Sending notification for ticket TKT-7857 to USR-231","sessionId":"sess-179120","ticketId":"TKT-7857","userId":"USR-231","thread":"pool-1"}
+{"ts":1772667113988,"level":"TRACE","logger":"auth-provider","message":"User USR-596 commented on ticket TKT-7539","sessionId":"sess-360674","ticketId":"TKT-7539","userId":"USR-596","thread":"pool-0"}
+{"ts":1772667114997,"level":"ERROR","logger":"auth-provider","message":"Assigned ticket TKT-8564 to agent agent-3","sessionId":"sess-278683","ticketId":"TKT-8564","userId":"USR-232","thread":"pool-2"}
+{"ts":1772667116011,"level":"DEBUG","logger":"notification-manager","message":"Ticket TKT-5808 validation failed: Invalid format","sessionId":"sess-10564","ticketId":"TKT-5808","userId":"USR-793","thread":"pool-0"}
+{"ts":1772667116011,"level":"INFO","logger":"notification-manager","message":"Ticket TKT-3868 validation failed: Missing required field","sessionId":"sess-230007","ticketId":"TKT-3868","userId":"USR-415","thread":"pool-0"}
+{"ts":1772667117020,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-5841 to USR-416","sessionId":"sess-569834","ticketId":"TKT-5841","userId":"USR-416","thread":"pool-0"}
+{"ts":1772667117020,"level":"INFO","logger":"notification-manager","message":"Archive operation started for ticket TKT-4502","sessionId":"sess-264645","ticketId":"TKT-4502","userId":"USR-306","thread":"pool-1"}
+{"ts":1772667118034,"level":"ERROR","logger":"auth-provider","message":"Sending notification for ticket TKT-9187 to USR-843","sessionId":"sess-179120","ticketId":"TKT-9187","userId":"USR-843","thread":"pool-2"}
+{"ts":1772667119042,"level":"DEBUG","logger":"user-api","message":"Archive operation started for ticket TKT-6404","sessionId":"sess-905566","ticketId":"TKT-6404","userId":"USR-122","thread":"pool-2"}
+{"ts":1772667119042,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-8953","sessionId":"sess-134831","ticketId":"TKT-8953","userId":"USR-332","thread":"pool-3"}
+{"ts":1772667120054,"level":"INFO","logger":"ticket-service","message":"Fetching ticket TKT-3678","sessionId":"sess-905566","ticketId":"TKT-3678","userId":"USR-700","thread":"pool-1"}
+{"ts":1772667121067,"level":"DEBUG","logger":"db-handler","message":"Fetching ticket TKT-2771","sessionId":"sess-230007","ticketId":"TKT-2771","userId":"USR-781","thread":"pool-2"}
+{"ts":1772667121067,"level":"TRACE","logger":"ticket-service","message":"Sending notification for ticket TKT-1877 to USR-952","sessionId":"sess-666391","ticketId":"TKT-1877","userId":"USR-952","thread":"pool-0"}
+{"ts":1772667122078,"level":"DEBUG","logger":"db-handler","message":"Assigned ticket TKT-1248 to agent agent-3","sessionId":"sess-172332","ticketId":"TKT-1248","userId":"USR-541","thread":"pool-2"}
+{"ts":1772667123087,"level":"DEBUG","logger":"db-handler","message":"Archive operation started for ticket TKT-3378","sessionId":"sess-399983","ticketId":"TKT-3378","userId":"USR-208","thread":"pool-3"}
+{"ts":1772667124096,"level":"DEBUG","logger":"user-api","message":"Sending notification for ticket TKT-8032 to USR-438","sessionId":"sess-10564","ticketId":"TKT-8032","userId":"USR-438","thread":"pool-0"}
+{"ts":1772667125105,"level":"ERROR","logger":"db-handler","message":"Sending notification for ticket TKT-9228 to USR-415","sessionId":"sess-74314","ticketId":"TKT-9228","userId":"USR-415","thread":"pool-0"}
+{"ts":1772667125106,"level":"ERROR","logger":"db-handler","message":"User USR-831 commented on ticket TKT-5597","sessionId":"sess-629974","ticketId":"TKT-5597","userId":"USR-831","thread":"pool-3"}
+{"ts":1772667126117,"level":"INFO","logger":"db-handler","message":"Archive operation started for ticket TKT-3945","sessionId":"sess-666391","ticketId":"TKT-3945","userId":"USR-235","thread":"pool-1"}
+{"ts":1772667126122,"level":"INFO","logger":"notification-manager","message":"Fetching ticket TKT-7131","sessionId":"sess-230007","ticketId":"TKT-7131","userId":"USR-697","thread":"pool-2"}
+{"ts":1772667127124,"level":"TRACE","logger":"auth-provider","message":"User USR-436 commented on ticket TKT-2608","sessionId":"sess-174958","ticketId":"TKT-2608","userId":"USR-436","thread":"pool-2"}
+{"ts":1772667127125,"level":"INFO","logger":"user-api","message":"Archive operation started for ticket TKT-1163","sessionId":"sess-693491","ticketId":"TKT-1163","userId":"USR-580","thread":"pool-2"}
+{"ts":1772667128136,"level":"DEBUG","logger":"db-handler","message":"Sending notification for ticket TKT-8677 to USR-147","sessionId":"sess-666391","ticketId":"TKT-8677","userId":"USR-147","thread":"pool-3"}
+{"ts":1772667128136,"level":"WARN","logger":"user-api","message":"User USR-963 commented on ticket TKT-9181","sessionId":"sess-666391","ticketId":"TKT-9181","userId":"USR-963","thread":"pool-3"}
+{"ts":1772667129147,"level":"WARN","logger":"auth-provider","message":"Sending notification for ticket TKT-6563 to USR-494","sessionId":"sess-957412","ticketId":"TKT-6563","userId":"USR-494","thread":"pool-2"}
+{"ts":1772667130155,"level":"ERROR","logger":"user-api","message":"Ticket TKT-6169 validation failed: Invalid format","sessionId":"sess-172332","ticketId":"TKT-6169","userId":"USR-466","thread":"pool-2"}
+{"ts":1772667130156,"level":"DEBUG","logger":"ticket-service","message":"Archive operation started for ticket TKT-3045","sessionId":"sess-513878","ticketId":"TKT-3045","userId":"USR-235","thread":"pool-2"}
+{"ts":1772667131164,"level":"DEBUG","logger":"auth-provider","message":"Assigned ticket TKT-9688 to agent agent-4","sessionId":"sess-569834","ticketId":"TKT-9688","userId":"USR-618","thread":"pool-3"}
+{"ts":1772667132176,"level":"ERROR","logger":"ticket-service","message":"Sending notification for ticket TKT-9110 to USR-602","sessionId":"sess-464507","ticketId":"TKT-9110","userId":"USR-602","thread":"pool-2"}
+{"ts":1772667133188,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-6538 validation failed: Permission denied","sessionId":"sess-806844","ticketId":"TKT-6538","userId":"USR-898","thread":"pool-3"}
+{"ts":1772667134197,"level":"WARN","logger":"notification-manager","message":"Updated status for ticket TKT-4325: Open","sessionId":"sess-464507","ticketId":"TKT-4325","userId":"USR-483","thread":"pool-2"}
+{"ts":1772667134199,"level":"INFO","logger":"ticket-service","message":"Assigned ticket TKT-7770 to agent agent-4","sessionId":"sess-569834","ticketId":"TKT-7770","userId":"USR-487","thread":"pool-3"}
+{"ts":1772667135208,"level":"TRACE","logger":"ticket-service","message":"Ticket TKT-6815 validation failed: Invalid format","sessionId":"sess-30228","ticketId":"TKT-6815","userId":"USR-614","thread":"pool-1"}
+{"ts":1772667135208,"level":"TRACE","logger":"user-api","message":"Assigned ticket TKT-6703 to agent agent-4","sessionId":"sess-750017","ticketId":"TKT-6703","userId":"USR-829","thread":"pool-2"}
+{"ts":1772667136215,"level":"DEBUG","logger":"db-handler","message":"Ticket TKT-2720 validation failed: Missing required field","sessionId":"sess-10564","ticketId":"TKT-2720","userId":"USR-550","thread":"pool-1"}
+{"ts":1772667136216,"level":"INFO","logger":"db-handler","message":"Sending notification for ticket TKT-8538 to USR-519","sessionId":"sess-569834","ticketId":"TKT-8538","userId":"USR-519","thread":"pool-0"}

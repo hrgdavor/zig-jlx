@@ -104,16 +104,19 @@ jlx -c <config> [options] [file]
 | Flag        | Long form       | Description                                          |
 |-------------|-----------------|------------------------------------------------------|
 | `-c <path>` | `--config`      | Config file (**required**)                           |
-| `-t`        | `--tail`        | Tail the file — shows only newly appended lines      |
+| `-f`        | `--follow`      | Follow the file — shows newly appended lines         |
 | `-p <name>` | `--profile`     | Profile name to use from the matched config section  |
 | `-o <path>` | `--output`      | Write output to a file (default: stdout)             |
 | `-x`        | `--passthrough` | Echo original line as-is (valid JSON lines only)     |
 | `-i <text>` | `--include`     | Include only lines matching filter (repeatable)      |
 | `-e <text>` | `--exclude`     | Exclude lines matching filter (repeatable)           |
-| `-r <range>`| `--range`       | Filter by time/date range (e.g. "08:00..09:30")      |
+| `-r <spec>` | `--range`       | Filter by time/date range (e.g. "08:00..09:30") or head/tail lines (e.g. "30", "-100") |
 | `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
 | `-v <spec>` | `--values`      | Collect unique values for a key (prefix:key)         |
 |             | `--keys`        | Collect and list all unique JSON keys discovered     |
+| `-s`        | `--serve`       | Start a web server for interactive log analysis      |
+|             | `--port <num>`  | Port to listen on (default 3000)                      |
+| `-w <path>` | `--www`         | Path to serve static files from (default: internal)  |
 
 ### Input modes
 
@@ -121,12 +124,24 @@ jlx -c <config> [options] [file]
 # Read a file (positional argument)
 jlx -c app.conf app.log
 
-# Tail a file — shows only NEW lines appended after start
-jlx -c app.conf -t app.log
+# Follow a file — shows NEW lines appended after start
+jlx -c app.conf -f app.log
 
 # Read from stdin (no file argument)
 cat app.log | jlx -c app.conf
 tail -f app.log | jlx -c app.conf -p timed
+
+# Web server mode (interactive workbench)
+jlx -c app.conf --serve app.log
+
+# Show first 50 lines only
+jlx -c app.conf -r 50 app.log
+
+# Show last 100 lines and then exit
+jlx -c app.conf -r -100 app.log
+
+# Follow from the last 50 lines (combo of range and follow)
+jlx -c app.conf -f -r -50 app.log
 ```
 
 ---
@@ -241,6 +256,8 @@ The following aliases map to the JSON key configured in the matched `[folders]` 
 | `{timestamp:datetime}` | Configured timestamp key — ISO `YYYY-MM-DD HH:MM:SS` |
 | `{timestamp:time}`     | Configured timestamp key — `HH:MM:SS`                |
 | `{timestamp:timems}`   | Configured timestamp key — `HH:MM:SS.mmm`            |
+| `{key:N}`              | Right-pad field `key` to `N` characters (e.g. `{level:6}`) |
+| `{key:time}`           | Format *any* numeric field as time (also `:datetime`, `:timems`) |
 | `{level}`              | Configured level key                                 |
 | `{message}`            | Configured message key                               |
 | `{thread}`             | Configured thread key                                |
@@ -279,12 +296,15 @@ jlx -c app.conf app.log -i ERROR -e healthcheck
 
 ---
 
-## Range Filtering
+The `-r` / `--range` flag allows filtering logs by their timestamp or selecting a slice of lines (Head/Tail).
 
-The `-r` / `--range` flag allows filtering logs by their timestamp. Use the format `from..to`.
+### Head/Tail Selection (Numeric)
+- `N` (positive): Show the first `N` lines of the file (equivalent to `head -n N`).
+- `-N` (negative): Show the last `N` lines of the file (equivalent to `tail -n N`).
 
-### Syntax
+When using `-N`, `jlx` performs a **SIMD-optimized backward scan** from the end of the file to find the correct offset efficiently without reading the entire file.
 
+### Time Range Syntax
 - `HH:MM:SS..HH:MM:SS` (time-only: matches time-of-day in the configured timezone)
 - `YYYY-MM-DD HH:MM:SS..YYYY-MM-DD HH:MM:SS` (datetime: specific absolute range)
 - Either side can be omitted: `..09:00` (until 9 AM), `2024-01-01..` (from Jan 1st)
@@ -397,8 +417,8 @@ jlx -c myapp.conf app.log
 # ISO timestamp using a profile
 jlx -c myapp.conf -p timed app.log
 
-# Tail live log with profile
-jlx -c myapp.conf -p timed -t app.log
+# Follow live log with profile
+jlx -c myapp.conf -p timed -f app.log
 
 # Pipe from kubectl
 kubectl logs my-pod | jlx -c k8s.conf -p timed
@@ -406,8 +426,8 @@ kubectl logs my-pod | jlx -c k8s.conf -p timed
 # Output raw JSON lines for further processing
 jlx -c myapp.conf -x app.log | jq .message
 
-# Filter while tailing
-jlx -c myapp.conf -t app.log -i ERROR -e "connection reset"
+# Filter while following
+jlx -c myapp.conf -f app.log -i ERROR -e "connection reset"
 ```
 
 ---
@@ -416,11 +436,10 @@ jlx -c myapp.conf -t app.log -i ERROR -e "connection reset"
 
 `jlx` is designed for high-performance log processing, employing several memory and allocation optimizations to minimize overhead:
 
-### Dynamic Block Buffering (1MB - 16MB)
-Instead of traditionally allocating memory for each line being read, `jlx` utilizes a single, reusable `1MB - 16MB` block buffer. The file stream is bulk-read directly into this buffer. 
-Lines are scanned in-place by simply hunting for the `\n` character. Incomplete lines at the end of the buffer are intelligently shifted (using `std.mem.copyForwards`) to the start, and the buffer resumes filling natively.
+### High-Performance Follow Logic
+When selecting the last `N` lines (`-r -N`), `jlx` uses a double-buffer strategy to read the file in reverse chunks from the end. It uses SIMD instructions to hunt for newlines (`\n`) in these chunks, making it extremely fast even for multi-gigabyte files. 
 
-This approach guarantees zero file-reading allocations for any line under 1MB. If reading encounters a massive log entry, the buffer dynamically doubles up to a hard cap of `16MB`. If a line exceeds 16MB without a newline, `jlx` intercepts it, prints a warning (in verbose mode), and safely skips to the next newline to prevent Out-Of-Memory (OOM) crashes.
+### Dynamic Block Buffering (1MB - 16MB)
 
 ### Zero-Allocation JSON Parser
 The custom JSON parser avoids generating an Abstract Syntax Tree (AST) or copying strings into a new memory location. It simply outputs a `std.StringHashMap` that references exact `[]const u8` slices straight from the `1MB` static reading buffer. 
@@ -442,6 +461,15 @@ By default, it generates **session-based ticket logs** for a single day (`2026-0
 ```bash
 # Generate 10,000 lines of ticket logs
 bun scripts/generate-log.js 10000 > test_session_tickets.log
+```
+
+### Live log simulation
+
+The generator can also run in **live mode**, appending randomized entries to a log file every second using the current system time. This is useful for testing `jlx --tail` or the interactive web workbench.
+
+```bash
+# Append 1-2 entries per second to test.log indefinitely
+bun scripts/generate-log.js 0 live >> test.log
 ```
 
 The logs include:

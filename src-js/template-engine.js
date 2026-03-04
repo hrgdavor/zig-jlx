@@ -59,8 +59,38 @@ export function formatValue(valSlice, spec) {
                 return num.toFixed(parseInt(spec, 10));
             }
         }
+        if (spec === "datetime" || spec === "time" || spec === "timems") {
+            let num = parseInt(val, 10);
+            if (!isNaN(num)) {
+                // 10-digit = seconds, 13-digit = milliseconds
+                if (num > 0 && num < 10000000000) num *= 1000;
+                const d = new Date(num);
+                if (spec === "datetime") {
+                    return d.getFullYear() + "-" +
+                        String(d.getMonth() + 1).padStart(2, '0') + "-" +
+                        String(d.getDate()).padStart(2, '0') + " " +
+                        String(d.getHours()).padStart(2, '0') + ":" +
+                        String(d.getMinutes()).padStart(2, '0') + ":" +
+                        String(d.getSeconds()).padStart(2, '0');
+                } else if (spec === "time") {
+                    return String(d.getHours()).padStart(2, '0') + ":" +
+                        String(d.getMinutes()).padStart(2, '0') + ":" +
+                        String(d.getSeconds()).padStart(2, '0');
+                } else {
+                    return String(d.getHours()).padStart(2, '0') + ":" +
+                        String(d.getMinutes()).padStart(2, '0') + ":" +
+                        String(d.getSeconds()).padStart(2, '0') + "." +
+                        String(d.getMilliseconds()).padStart(3, '0');
+                }
+            }
+        }
         if (spec === "upper") return val.toUpperCase();
         if (spec === "lower") return val.toLowerCase();
+
+        const width = parseInt(spec, 10);
+        if (!isNaN(width)) {
+            return val.padEnd(width);
+        }
     }
     return val;
 }

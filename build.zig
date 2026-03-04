@@ -73,6 +73,12 @@ pub fn build(b: *std.Build) void {
     //
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
+    const web_assets = b.addOptions();
+    const index_html = b.build_root.handle.readFileAlloc(b.allocator, "zig-out/web/index.html", 1024 * 1024) catch "";
+    const demo_js = b.build_root.handle.readFileAlloc(b.allocator, "zig-out/web/demo-client.js", 1024 * 1024) catch "";
+    web_assets.addOption([]const u8, "index_html", index_html);
+    web_assets.addOption([]const u8, "demo_js", demo_js);
+
     const exe = b.addExecutable(.{
         .name = "jlx",
         .root_module = b.createModule(.{
@@ -97,6 +103,7 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "zig_jlx", .module = mod },
                 .{ .name = "mvzr", .module = mvzr_mod },
                 .{ .name = "args", .module = args_mod },
+                .{ .name = "web_assets", .module = web_assets.createModule() },
             },
         }),
     });

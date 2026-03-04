@@ -431,3 +431,61 @@ Running standard heap allocators to allocate and free these strings per line, mi
 
 To achieve near-zero string cleanup overhead in the hot path, `jlx` wraps the line expansion functionality in a **Line-Scoped Arena Allocator** (`std.heap.ArenaAllocator`). 
 At the start of processing a log line, the arena provides memory for parsed items and format templates. At the end of the line, instead of individually freeing dozens of string permutations, `jlx` instantly resets the arena (`arena.reset(.retain_capacity)`). This allows memory to be inherently pooled and reused for the next line without any continuous malloc overhead.
+---
+
+## 🛠️ Log Generation
+
+A high-performance JS script is provided in `scripts/generate-log.js` to create synthetic datasets for testing. 
+
+By default, it generates **session-based ticket logs** for a single day (`2026-03-04`).
+
+```bash
+# Generate 10,000 lines of ticket logs
+bun scripts/generate-log.js 10000 > test_session_tickets.log
+```
+
+The logs include:
+- `ts`: Millisecond timestamp
+- `level`: INFO/WARN/ERROR/DEBUG/TRACE
+- `sessionId`: Random session identifiers (e.g., `sess-123456`)
+- `ticketId`: Ticket references (e.g., `TKT-1001`)
+- `userId`: User IDs
+- `message`: Randomized ticket-related actions (fetching, status updates, assignments)
+
+---
+
+## JavaScript Implementation & Interactive Demo
+
+We provide a reference JavaScript implementation of the `jlx` core logic in the [`src-js`](./src-js) folder, along with an interactive web-based demo.
+
+### 🚀 Interactive Demo
+
+The demo allows you to practice `jlx` usage, live-preview log formatting, and generate equivalent CLI commands directly in your browser.
+
+- **How to refresh everything:**
+```bash
+cd src-js
+bun run generate-test-log     # Refreshes the test log (3000 lines)
+bun run build-demo            # Bundles demo and copies the refreshed log
+```
+    2. Run a local server to enable `fetch` features:
+       ```bash
+       bun x serve ../docs
+       ```
+    3. Open the provided `localhost` URL in your browser.
+
+> [!NOTE]
+> The demo source is located in [`src-js/demo.html`](./src-js/demo.html). It is bundled into a standalone file using `bun run build-demo` inside the `src-js` folder.
+
+### 🧪 JS Core & Parity Tests
+
+The JS implementation is managed with `bun` and includes a suite of parity tests to ensure it matches the Zig version's logic.
+
+```bash
+cd src-js
+bun install
+bun test
+```
+
+See the [src-js README](./src-js/README.md) for more details.
+

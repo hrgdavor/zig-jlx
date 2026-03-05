@@ -456,8 +456,6 @@ jlx -c myapp.conf -f app.log -i ERROR -e "connection reset"
 ### High-Performance Follow Logic
 When selecting the last `N` lines (`-r -N`), `jlx` uses a double-buffer strategy to read the file in reverse chunks from the end. It uses SIMD instructions to hunt for newlines (`\n`) in these chunks, making it extremely fast even for multi-gigabyte files. 
 
-### Dynamic Block Buffering (1MB - 16MB)
-
 ### Zero-Allocation JSON Parser
 The custom JSON parser avoids generating an Abstract Syntax Tree (AST) or copying strings into a new memory location. It simply outputs a `std.StringHashMap` that references exact `[]const u8` slices straight from the `1MB` static reading buffer. 
 

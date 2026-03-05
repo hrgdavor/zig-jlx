@@ -507,7 +507,7 @@ bun run build-demo            # Bundles demo and copies the refreshed log
 ```
     2. Run a local server to enable `fetch` features:
        ```bash
-       bun x serve site
+       bun x serve docs
        ```
     3. Open the provided `localhost` URL in your browser.
 

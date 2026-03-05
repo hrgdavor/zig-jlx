@@ -11,7 +11,7 @@ You can practice using `jlx` and see live formatting in the interactive demo:
     2. Build the artifacts: `bun run build-demo`
     2. Run a local server to enable `fetch` features:
        ```bash
-       bun x serve site
+       bun x serve docs
        ```
     3. Open the provided `localhost` URL in your browser.
 
@@ -20,7 +20,7 @@ You can practice using `jlx` and see live formatting in the interactive demo:
 The demo is now a standalone HTML file with all JS logic inlined, suitable for GitHub Pages.
 
 ```bash
-# Build the standalone demo (generates site/index.html)
+# Build the standalone demo (generates docs/index.html)
 bun run build-demo
 ```
 

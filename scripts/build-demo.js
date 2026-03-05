@@ -6,7 +6,7 @@ async function build() {
 
     const srcDir = 'src-js';
     const rootDir = join(srcDir, '..');
-    const siteDir = join(rootDir, 'site');
+    const siteDir = join(rootDir, 'docs');
 
     if (!existsSync(siteDir)) {
         mkdirSync(siteDir);

@@ -107,8 +107,9 @@ Each `[folders]` section can contain **`[profile.<name>]`** sub-sections that ov
 | `thread`   | `thread`                         | JSON key for the thread field                          |
 | `logger`   | `logger`                         | JSON key for the logger name field                     |
 | `trace`    | `trace`                          | JSON key for the stack trace field                     |
-| `include`  | *(none)*                         | Comma-separated filters — only matching lines shown. Supports key-specific and regex matching.   |
-| `exclude`  | *(none)*                         | Comma-separated filters — matching lines are hidden. Supports key-specific and regex matching.   |
+| `include`      | *(none)*                         | Comma-separated filters — only matching lines shown. Supports key-specific and regex matching.   |
+| `exclude`      | *(none)*                         | Comma-separated filters — matching lines are hidden. Supports key-specific and regex matching.   |
+| `message_expand` | *(none)*                       | Expander syntax for message templates: `curly`, `js`, `ruby`, `double_curly`, `brackets`, `parens`, `printf`, `env`, `colon` |
 
 ### `[profile.<name>]` keys
 
@@ -194,6 +195,93 @@ output = {timestamp} |{request_id}|{user_id}|: {message}
 ```
 
 If a key is absent from a line it is replaced with `""`.
+
+---
+
+## Message expansion (`message_expand`)
+
+Structured logs often store a message template with embedded placeholders in the `message` field, letting the application avoid doing string interpolation at log time:
+
+```json
+{"level":"INFO","message":"User {userId} logged in from {ip}","userId":"alice","ip":"10.0.0.1"}
+```
+
+Set `message_expand` in your `[folders]` section (or a profile) to tell `jlx` to expand the message text using the **other JSON fields on the same line** as variables:
+
+```ini
+[folders]
+output         = {timestamp:time} {level}: {message}
+message_expand = curly
+```
+
+Output:
+```
+12:34:56 INFO: User alice logged in from 10.0.0.1
+```
+
+Without `message_expand`, the `{userId}` and `{ip}` tokens inside the message string would appear literally.
+
+### Supported expanders
+
+| Value          | Syntax inside the message              | Example template                        |
+|----------------|----------------------------------------|-----------------------------------------|
+| `curly`        | `{key}`                                | `"Hello {name}"`                        |
+| `js`           | `${key}`                               | `"Hello ${name}"`                       |
+| `double_curly` | `{{key}}`                              | `"Hello {{name}}"`                      |
+| `brackets`     | `[key]`                                | `"Hello [name]"`                        |
+| `ruby`         | `#{key}`                               | `"Hello #{name}"`                       |
+| `parens`       | `(key)`                                | `"Hello (name)"`                        |
+| `printf`       | `%key`                                 | `"Hello %name"`                         |
+| `env`          | `$key`                                 | `"Hello $name"`                         |
+| `colon`        | `:key`                                 | `"Hello :name"`                         |
+
+Placeholders that reference keys **absent from that log line are left intact** — no data is lost.
+
+### Examples
+
+**Curly (`{key}`) — default in most Zig/Java/Python logging:**
+```ini
+[folders]
+output         = {level}: {message}
+message_expand = curly
+```
+```json
+{"level":"WARN","message":"Disk {drive} at {pct}% capacity","drive":"C:","pct":"92"}
+```
+→ `WARN: Disk C: at 92% capacity`
+
+**JS Template (`${key}`) — common in Node.js:**
+```ini
+[folders]
+output         = {level}: {message}
+message_expand = js
+```
+```json
+{"level":"ERROR","message":"Failed to reach ${host}:${port}","host":"db.local","port":"5432"}
+```
+→ `ERROR: Failed to reach db.local:5432`
+
+**Ruby (`#{key}`) — Rails / Puma logs:**
+```ini
+[folders]
+output         = {level}: {message}
+message_expand = ruby
+```
+```json
+{"level":"INFO","message":"Processed #{method} #{path} in #{duration}ms","method":"GET","path":"/api","duration":"12"}
+```
+→ `INFO: Processed GET /api in 12ms`
+
+> [!TIP]
+> `message_expand` can also be set on a **profile**, letting you enable expansion only for selected profiles without changing the default output.
+>
+> ```ini
+> [profile.expanded]
+> message_expand = curly
+> ```
+> ```sh
+> jlx -c app.conf -p expanded app.log
+> ```
 
 ---
 

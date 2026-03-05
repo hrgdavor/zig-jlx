@@ -68,5 +68,33 @@
         "args": {},
         "line": "{\"level\": \"INFO\", \"meta\": {\"id\": 123, \"ok\": true}}",
         "expected": "INFO: {\"id\": 123, \"ok\": true}"
+    },
+    {
+        "name": "message_expand: curly style",
+        "config": "[folders]\noutput = {level}: {message}\nmessage_expand = curly\n",
+        "args": {},
+        "line": "{\"level\": \"INFO\", \"message\": \"User {userId} logged in\", \"userId\": \"alice\"}",
+        "expected": "INFO: User alice logged in"
+    },
+    {
+        "name": "message_expand: js style",
+        "config": "[folders]\noutput = {level}: {message}\nmessage_expand = js\n",
+        "args": {},
+        "line": "{\"level\": \"WARN\", \"message\": \"Disk ${drive} at ${pct}% full\", \"drive\": \"C:\", \"pct\": \"92\"}",
+        "expected": "WARN: Disk C: at 92% full"
+    },
+    {
+        "name": "message_expand: ruby style",
+        "config": "[folders]\noutput = {level}: {message}\nmessage_expand = ruby\n",
+        "args": {},
+        "line": "{\"level\": \"ERROR\", \"message\": \"Failed to connect to #{host}:#{port}\", \"host\": \"db.local\", \"port\": \"5432\"}",
+        "expected": "ERROR: Failed to connect to db.local:5432"
+    },
+    {
+        "name": "message_expand: missing var left intact",
+        "config": "[folders]\noutput = {level}: {message}\nmessage_expand = curly\n",
+        "args": {},
+        "line": "{\"level\": \"INFO\", \"message\": \"Hello {name}, your id is {id}\", \"name\": \"bob\"}",
+        "expected": "INFO: Hello bob, your id is {id}"
     }
 ]

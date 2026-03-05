@@ -9,7 +9,28 @@ permissions:
   contents: write
 
 jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install JS dependencies
+        run: bun install
+
+      - name: Build demo (produces zig-out/web/*)
+        run: bun run build-demo
+
+      - name: Upload web assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-assets
+          path: zig-out/web/
+          retention-days: 1
+
   build:
+    needs: build-web
     strategy:
       matrix:
         include:
@@ -30,6 +51,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download web assets
+        uses: actions/download-artifact@v4
+        with:
+          name: web-assets
+          path: zig-out/web/
 
       - uses: mlugg/setup-zig@v2
         with:

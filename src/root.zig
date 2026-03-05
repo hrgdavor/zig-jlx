@@ -26,4 +26,5 @@ test {
     // fast_reader.zig has a XevReader test that hangs on Windows; exclude from automated tests.
     _ = @import("parser.zig");
     _ = @import("processor.zig");
+    _ = @import("template_engine.zig");
 }

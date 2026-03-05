@@ -1,0 +1,132 @@
+[
+    {
+        "name": "curly: basic substitution",
+        "expander": "curly",
+        "template": "Hello, {name}!",
+        "vars": {
+            "name": "world"
+        },
+        "expected": "Hello, world!"
+    },
+    {
+        "name": "curly: multiple keys",
+        "expander": "curly",
+        "template": "{level}: {message}",
+        "vars": {
+            "level": "INFO",
+            "message": "started"
+        },
+        "expected": "INFO: started"
+    },
+    {
+        "name": "curly: missing key left intact",
+        "expander": "curly",
+        "template": "{level}: {missing}",
+        "vars": {
+            "level": "WARN"
+        },
+        "expected": "WARN: {missing}"
+    },
+    {
+        "name": "curly: spec upper",
+        "expander": "curly",
+        "template": "{level:upper}",
+        "vars": {
+            "level": "info"
+        },
+        "expected": "INFO"
+    },
+    {
+        "name": "curly: spec lower",
+        "expander": "curly",
+        "template": "{level:lower}",
+        "vars": {
+            "level": "CRITICAL"
+        },
+        "expected": "critical"
+    },
+    {
+        "name": "curly: spec hex",
+        "expander": "curly",
+        "template": "0x{code:hex}",
+        "vars": {
+            "code": "255"
+        },
+        "expected": "0xff"
+    },
+    {
+        "name": "curly: spec HEX",
+        "expander": "curly",
+        "template": "0x{code:HEX}",
+        "vars": {
+            "code": "255"
+        },
+        "expected": "0xFF"
+    },
+    {
+        "name": "curly: spec decimal 2",
+        "expander": "curly",
+        "template": "{val:2}",
+        "vars": {
+            "val": "3.14159"
+        },
+        "expected": "3.14"
+    },
+    {
+        "name": "curly: spec decimal 4",
+        "expander": "curly",
+        "template": "{val:4}",
+        "vars": {
+            "val": "1.5"
+        },
+        "expected": "1.5000"
+    },
+    {
+        "name": "curly: spec width pad",
+        "expander": "curly",
+        "template": "[{level:8}]",
+        "vars": {
+            "level": "INFO"
+        },
+        "expected": "[INFO    ]"
+    },
+    {
+        "name": "js: basic substitution",
+        "expander": "js",
+        "template": "Hello, ${name}!",
+        "vars": {
+            "name": "world"
+        },
+        "expected": "Hello, world!"
+    },
+    {
+        "name": "double_curly: basic substitution",
+        "expander": "double_curly",
+        "template": "{{level}}: {{message}}",
+        "vars": {
+            "level": "DEBUG",
+            "message": "ok"
+        },
+        "expected": "DEBUG: ok"
+    },
+    {
+        "name": "brackets: basic substitution",
+        "expander": "brackets",
+        "template": "[level]: [message]",
+        "vars": {
+            "level": "ERROR",
+            "message": "oops"
+        },
+        "expected": "ERROR: oops"
+    },
+    {
+        "name": "ruby: basic substitution",
+        "expander": "ruby",
+        "template": "#{level}: #{message}",
+        "vars": {
+            "level": "INFO",
+            "message": "connected"
+        },
+        "expected": "INFO: connected"
+    }
+]

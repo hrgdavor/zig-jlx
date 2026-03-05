@@ -41,9 +41,13 @@ export function expandGeneric(message, parsed, openSeq, closeSeq) {
 
 export function formatValue(valSlice, spec) {
     let val = valSlice;
-    // Strip quotes if it's a string
+    // Unescape JSON string values (strip surrounding quotes and interpret escape sequences)
     if (val.length >= 2 && val[0] === '"' && val[val.length - 1] === '"') {
-        val = val.substring(1, val.length - 1);
+        try {
+            val = JSON.parse(val);
+        } catch {
+            val = val.substring(1, val.length - 1);
+        }
     }
 
     if (spec) {

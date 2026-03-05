@@ -68,7 +68,7 @@ const workflows = [
 configEditor.value = configSamples[0].content;
 
 // Auto-load sample log if running on a server (e.g. GitHub Pages)
-async function tryAutoLoadSample() {
+globalThis.tryAutoLoadSample = async function tryAutoLoadSample() {
     try {
         const resp = await fetch('./test_session_tickets.log');
         if (resp.ok) {

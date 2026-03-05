@@ -8,6 +8,44 @@ const web_assets = @import("web_assets");
 const index_html = web_assets.index_html;
 const demo_client_js = web_assets.demo_js;
 
+const builtin = @import("builtin");
+const is_windows = builtin.os.tag == .windows;
+
+fn socketRecv(handle: std.posix.socket_t, buf: []u8) !usize {
+    if (is_windows) {
+        const ws2_32 = std.os.windows.ws2_32;
+        const n = ws2_32.recv(handle, @ptrCast(buf.ptr), @intCast(buf.len), 0);
+        if (n == ws2_32.SOCKET_ERROR) {
+            const err = ws2_32.WSAGetLastError();
+            std.log.err("recv error: {d}", .{err});
+            return error.Unexpected;
+        }
+        return @intCast(n);
+    } else {
+        return try std.posix.recv(handle, buf, 0);
+    }
+}
+
+fn socketSend(handle: std.posix.socket_t, buf: []const u8) !void {
+    var sent: usize = 0;
+    while (sent < buf.len) {
+        if (is_windows) {
+            const ws2_32 = std.os.windows.ws2_32;
+            const n = ws2_32.send(handle, @ptrCast(buf.ptr + sent), @intCast(buf.len - sent), 0);
+            if (n == ws2_32.SOCKET_ERROR) {
+                const err = ws2_32.WSAGetLastError();
+                std.log.err("send error: {d}", .{err});
+                return error.Unexpected;
+            }
+            sent += @intCast(n);
+        } else {
+            const n = try std.posix.send(handle, buf[sent..], 0);
+            if (n == 0) return error.Unexpected;
+            sent += n;
+        }
+    }
+}
+
 pub const Server = struct {
     allocator: std.mem.Allocator,
     args: args_mod.Args,
@@ -46,14 +84,8 @@ pub const Server = struct {
     fn handleConnection(self: *Server, conn: std.net.Server.Connection) !void {
         defer conn.stream.close();
 
-        const ws2_32 = std.os.windows.ws2_32;
         var buf: [4096]u8 = undefined;
-        const n_signed = ws2_32.recv(conn.stream.handle, @ptrCast(&buf), @intCast(buf.len), 0);
-        if (n_signed == ws2_32.SOCKET_ERROR) {
-            std.log.err("recv error: {d}", .{ws2_32.WSAGetLastError()});
-            return;
-        }
-        const n = @as(usize, @intCast(n_signed));
+        const n = try socketRecv(conn.stream.handle, &buf);
         if (n == 0) return;
 
         const request = buf[0..n];
@@ -68,7 +100,7 @@ pub const Server = struct {
         if (!std.mem.eql(u8, method, "GET")) {
             std.log.info("Method not allowed: {s}", .{method});
             const msg = "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n";
-            _ = ws2_32.send(conn.stream.handle, @ptrCast(msg), @intCast(msg.len), 0);
+            try socketSend(conn.stream.handle, msg);
             return;
         }
 
@@ -86,7 +118,7 @@ pub const Server = struct {
                 defer dir.close();
                 const file = dir.openFile(relative_path, .{}) catch {
                     const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                    _ = ws2_32.send(conn.stream.handle, @ptrCast(msg), @intCast(msg.len), 0);
+                    try socketSend(conn.stream.handle, msg);
                     return;
                 };
                 defer file.close();
@@ -96,31 +128,29 @@ pub const Server = struct {
                 try self.sendStatic(conn.stream.handle, mime, content);
             } else {
                 const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                _ = ws2_32.send(conn.stream.handle, @ptrCast(msg), @intCast(msg.len), 0);
+                try socketSend(conn.stream.handle, msg);
             }
         }
     }
 
-    fn sendStatic(_: *Server, handle: std.os.windows.ws2_32.SOCKET, content_type: []const u8, content: []const u8) !void {
-        const ws2_32 = std.os.windows.ws2_32;
+    fn sendStatic(_: *Server, handle: std.posix.socket_t, content_type: []const u8, content: []const u8) !void {
         var header_buf: [256]u8 = undefined;
         const headers = try std.fmt.bufPrint(&header_buf, "HTTP/1.1 200 OK\r\n" ++
             "Content-Type: {s}\r\n" ++
             "Content-Length: {d}\r\n" ++
             "Connection: close\r\n" ++
             "\r\n", .{ content_type, content.len });
-        _ = ws2_32.send(handle, @ptrCast(headers), @intCast(headers.len), 0);
-        _ = ws2_32.send(handle, @ptrCast(content), @intCast(content.len), 0);
+        try socketSend(handle, headers);
+        try socketSend(handle, content);
     }
 
-    pub fn handleSSE(self: *Server, handle: anytype, path: []const u8) !void {
-        const w32 = std.os.windows.ws2_32;
+    pub fn handleSSE(self: *Server, handle: std.posix.socket_t, path: []const u8) !void {
         const head = "HTTP/1.1 200 OK\r\n" ++
             "Content-Type: text/event-stream\r\n" ++
             "Cache-Control: no-cache\r\n" ++
             "Connection: keep-alive\r\n" ++
             "\r\n";
-        _ = w32.send(handle, @ptrCast(head), @intCast(head.len), 0);
+        try socketSend(handle, head);
 
         // Parse query params to override args
         var sse_args = self.args;
@@ -168,25 +198,28 @@ pub const Server = struct {
         var ctx = try processor.buildContext();
         defer ctx.deinit(self.allocator);
 
-        const RawSseWriter = struct {
-            h: std.os.windows.ws2_32.SOCKET,
-            p: *processor_mod.Processor,
-            c: *const @import("processor.zig").LineContext,
+        const SseWriter = struct {
+            handle: std.posix.socket_t,
 
             pub fn write(rw: @This(), b: []const u8) !usize {
-                const w = std.os.windows.ws2_32;
-                _ = w.send(rw.h, "data: ", 6, 0);
-                _ = w.send(rw.h, @ptrCast(b.ptr), @intCast(b.len), 0);
-                _ = w.send(rw.h, "\n\n", 2, 0);
+                try socketSend(rw.handle, "data: ");
+                try socketSend(rw.handle, b);
+                try socketSend(rw.handle, "\n\n");
                 return b.len;
             }
             pub fn writeAll(rw: @This(), b: []const u8) !void {
                 _ = try rw.write(b);
             }
             pub fn flush(_: @This()) !void {}
+            pub fn writer(rw: @This()) std.io.Writer(@This(), anyerror, writeFn) {
+                return .{ .context = rw };
+            }
+            fn writeFn(rw: @This(), b: []const u8) anyerror!usize {
+                return try rw.write(b);
+            }
         };
 
-        const raw_writer = RawSseWriter{ .h = handle, .p = &processor, .c = &ctx };
+        const sse_writer = SseWriter{ .handle = handle };
 
         if (sse_args.file_path) |fpath| {
             const file = try std.fs.cwd().openFile(fpath, .{});
@@ -202,7 +235,7 @@ pub const Server = struct {
             }
 
             if (sse_args.follow) {
-                try processor.followFile(file, raw_writer, &ctx);
+                try processor.followFile(file, sse_writer, &ctx);
             } else {
                 var limit: ?usize = null;
                 if (sse_args.range) |rs| {
@@ -210,24 +243,8 @@ pub const Server = struct {
                         if (val > 0) limit = @intCast(val);
                     } else |_| {}
                 }
-                try processor.processStream(file, raw_writer, &ctx, limit);
+                try processor.processStream(file, sse_writer, &ctx, limit);
             }
         }
-    }
-};
-
-const SseContext = struct {
-    socket: std.os.windows.ws2_32.SOCKET,
-
-    pub fn writeFn(self: *const SseContext, b: []const u8) anyerror!usize {
-        const ws2_32_inner = std.os.windows.ws2_32;
-        _ = ws2_32_inner.send(self.socket, "data: ", 6, 0);
-        _ = ws2_32_inner.send(self.socket, @ptrCast(b.ptr), @intCast(b.len), 0);
-        _ = ws2_32_inner.send(self.socket, "\n\n", 2, 0);
-        return b.len;
-    }
-
-    pub fn writer(self: *const SseContext) std.io.Writer(*const SseContext, anyerror, SseContext.writeFn) {
-        return .{ .context = self };
     }
 };

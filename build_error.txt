@@ -1,0 +1,41 @@
+﻿zig : install
+At line:1 char:1
++ zig build 2>&1 | Out-File -FilePath build_error.txt -Encoding utf8
++ ~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (install:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
++- install jlx
+   +- compile exe jlx Debug native 1 errors
+C:\Users\hrg\AppData\Roaming\Antigravity\User\globalStorage\ziglang.vscode-zig\zig\x86_64-windows-0.15.2\lib\std\c.zi
+g:10731:12: error: dependency on libc must be explicitly specified in the build command
+pub extern "c" fn recvfrom(
+           ^~~
+referenced by:
+    recvfrom: C:\Users\hrg\AppData\Roaming\Antigravity\User\globalStorage\ziglang.vscode-zig\zig\x86_64-windows-0.15.
+2\lib\std\posix.zig:6544:26
+    recv: C:\Users\hrg\AppData\Roaming\Antigravity\User\globalStorage\ziglang.vscode-zig\zig\x86_64-windows-0.15.2\li
+b\std\posix.zig:6531:20
+    12 reference(s) hidden; use '-freference-trace=14' to see all references
+error: the following command failed with 1 compilation errors:
+"C:\\Users\\hrg\\AppData\\Roaming\\Antigravity\\User\\globalStorage\\ziglang.vscode-zig\\zig\\x86_64-windows-0.15.2\\
+zig.exe" build-exe -ODebug --dep zig_jlx --dep mvzr --dep args --dep web_assets --dep xev 
+"-Mroot=D:\\wrk\\zig\\zig-jlx\\src\\main.zig" --dep mvzr --dep args --dep xev 
+"-Mzig_jlx=D:\\wrk\\zig\\zig-jlx\\src\\root.zig" -ODebug "-Mmvzr=C:\\Users\\hrg\\AppData\\Local\\zig\\p\\mvzr-0.3.7-Z
+SOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt\\src\\mvzr.zig" -ODebug 
+"-Margs=C:\\Users\\hrg\\AppData\\Local\\zig\\p\\args-0.0.0-CiLiqo_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d\\args.zig" 
+"-Mweb_assets=.zig-cache\\c\\e9454b4eca815600e1ffd4532628429f\\options.zig" "-Mxev=C:\\Users\\hrg\\AppData\\Local\\zi
+g\\p\\libxev-0.0.0-86vtc0IbEwBzMSXa-ZPZ8JpcV4Mw1SrsTuvtJmFAQ7Uu\\src\\main.zig" --cache-dir .zig-cache 
+--global-cache-dir "C:\\Users\\hrg\\AppData\\Local\\zig" --name jlx --zig-lib-dir "C:\\Users\\hrg\\AppData\\Roaming\\
+Antigravity\\User\\globalStorage\\ziglang.vscode-zig\\zig\\x86_64-windows-0.15.2\\lib\\" --listen=-
+
+Build Summary: 1/4 steps succeeded; 1 failed
+install transitive failure
++- install jlx transitive failure
+   +- compile exe jlx Debug native 1 errors
+
+error: the following build command failed with exit code 1:
+.zig-cache\o\53fe766d0da9e716a78088bd5ddd4a4e\build.exe 
+C:\Users\hrg\AppData\Roaming\Antigravity\User\globalStorage\ziglang.vscode-zig\zig\x86_64-windows-0.15.2\zig.exe 
+C:\Users\hrg\AppData\Roaming\Antigravity\User\globalStorage\ziglang.vscode-zig\zig\x86_64-windows-0.15.2\lib 
+D:\wrk\zig\zig-jlx .zig-cache C:\Users\hrg\AppData\Local\zig --seed 0x1cf3e1cd -Zecd77bfdd02365e7

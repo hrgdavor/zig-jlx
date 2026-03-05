@@ -96,5 +96,12 @@
         "args": {},
         "line": "{\"level\": \"INFO\", \"message\": \"Hello {name}, your id is {id}\", \"name\": \"bob\"}",
         "expected": "INFO: Hello bob, your id is {id}"
+    },
+    {
+        "name": "escaped newlines (stack trace)",
+        "config": "[folders]\noutput = {level}: {message}\n",
+        "args": {},
+        "line": "{\"level\": \"ERROR\", \"message\": \"An error occurred\\n  at main.js:10:5\\n  at process.js:20:1\"}",
+        "expected": "ERROR: An error occurred\n  at main.js:10:5\n  at process.js:20:1"
     }
 ]

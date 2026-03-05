@@ -1,16 +1,85 @@
 const std = @import("std");
 
-/// Strip surrounding quotes from a JSON string value ("alice" → alice).
-fn stripQuotes(val: []const u8) []const u8 {
-    if (val.len >= 2 and val[0] == '"' and val[val.len - 1] == '"')
-        return val[1 .. val.len - 1];
-    return val;
+/// Unescape a JSON string value ("alice\n" → alice<newline>).
+fn unescapeJsonString(allocator: std.mem.Allocator, val_slice: []const u8) ![]const u8 {
+    if (val_slice.len >= 2 and val_slice[0] == '"' and val_slice[val_slice.len - 1] == '"') {
+        const inner = val_slice[1 .. val_slice.len - 1];
+        // Fast path
+        if (std.mem.indexOfScalar(u8, inner, '\\') == null) {
+            return try allocator.dupe(u8, inner);
+        }
+        // Unescape logic
+        var buf = try allocator.alloc(u8, inner.len);
+        var out: usize = 0;
+        var i: usize = 0;
+        while (i < inner.len) {
+            if (inner[i] == '\\' and i + 1 < inner.len) {
+                i += 1;
+                switch (inner[i]) {
+                    'n' => {
+                        buf[out] = '\n';
+                        out += 1;
+                    },
+                    't' => {
+                        buf[out] = '\t';
+                        out += 1;
+                    },
+                    'r' => {
+                        buf[out] = '\r';
+                        out += 1;
+                    },
+                    '\\' => {
+                        buf[out] = '\\';
+                        out += 1;
+                    },
+                    '"' => {
+                        buf[out] = '"';
+                        out += 1;
+                    },
+                    '/' => {
+                        buf[out] = '/';
+                        out += 1;
+                    },
+                    'b' => {
+                        buf[out] = 0x08;
+                        out += 1;
+                    },
+                    'f' => {
+                        buf[out] = 0x0C;
+                        out += 1;
+                    },
+                    'u' => {
+                        buf[out] = '\\';
+                        out += 1;
+                        buf[out] = 'u';
+                        out += 1;
+                        const remaining = @min(4, inner.len - i - 1);
+                        @memcpy(buf[out .. out + remaining], inner[i + 1 .. i + 1 + remaining]);
+                        out += remaining;
+                        i += remaining;
+                    },
+                    else => {
+                        buf[out] = '\\';
+                        out += 1;
+                        buf[out] = inner[i];
+                        out += 1;
+                    },
+                }
+            } else {
+                buf[out] = inner[i];
+                out += 1;
+            }
+            i += 1;
+        }
+        return buf[0..out];
+    }
+    return try allocator.dupe(u8, val_slice);
 }
 
 /// Apply a spec modifier to a bare (unquoted) value string.
 /// Returned slice is either a sub-slice of `val` or arena-allocated.
 pub fn formatValue(arena: std.mem.Allocator, val_raw: []const u8, spec: ?[]const u8) ![]const u8 {
-    const val = stripQuotes(val_raw);
+    const val = try unescapeJsonString(arena, val_raw);
     const s = spec orelse return val;
     if (s.len == 0) return val;
 

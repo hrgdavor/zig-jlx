@@ -870,7 +870,76 @@ pub const Processor = struct {
 
     fn valueToString(allocator: std.mem.Allocator, val_slice: []const u8) ![]const u8 {
         if (val_slice.len >= 2 and val_slice[0] == '"' and val_slice[val_slice.len - 1] == '"') {
-            return try allocator.dupe(u8, val_slice[1 .. val_slice.len - 1]);
+            const inner = val_slice[1 .. val_slice.len - 1];
+            // Fast path: no backslash → nothing to unescape
+            if (std.mem.indexOfScalar(u8, inner, '\\') == null) {
+                return try allocator.dupe(u8, inner);
+            }
+            // Slow path: unescape JSON string escape sequences
+            var buf = try allocator.alloc(u8, inner.len);
+            var out: usize = 0;
+            var i: usize = 0;
+            while (i < inner.len) {
+                if (inner[i] == '\\' and i + 1 < inner.len) {
+                    i += 1;
+                    switch (inner[i]) {
+                        'n' => {
+                            buf[out] = '\n';
+                            out += 1;
+                        },
+                        't' => {
+                            buf[out] = '\t';
+                            out += 1;
+                        },
+                        'r' => {
+                            buf[out] = '\r';
+                            out += 1;
+                        },
+                        '\\' => {
+                            buf[out] = '\\';
+                            out += 1;
+                        },
+                        '"' => {
+                            buf[out] = '"';
+                            out += 1;
+                        },
+                        '/' => {
+                            buf[out] = '/';
+                            out += 1;
+                        },
+                        'b' => {
+                            buf[out] = 0x08;
+                            out += 1;
+                        },
+                        'f' => {
+                            buf[out] = 0x0C;
+                            out += 1;
+                        },
+                        'u' => {
+                            // \uXXXX — emit the 6 chars as-is (UTF-8 handling not needed for stack traces)
+                            buf[out] = '\\';
+                            out += 1;
+                            buf[out] = 'u';
+                            out += 1;
+                            const remaining = @min(4, inner.len - i - 1);
+                            @memcpy(buf[out .. out + remaining], inner[i + 1 .. i + 1 + remaining]);
+                            out += remaining;
+                            i += remaining;
+                        },
+                        else => {
+                            buf[out] = '\\';
+                            out += 1;
+                            buf[out] = inner[i];
+                            out += 1;
+                        },
+                    }
+                } else {
+                    buf[out] = inner[i];
+                    out += 1;
+                }
+                i += 1;
+            }
+            return buf[0..out];
         }
         return try allocator.dupe(u8, val_slice);
     }

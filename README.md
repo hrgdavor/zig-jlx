@@ -10,7 +10,7 @@ Each log line can be optionally be preceded by arbitrary text (the first `{` mar
 
 ## Building
 
-For instructions on building `jlx` from source, including cross-compilation for different platforms, please refer to [README.build.md](./README.build.md).
+For instructions on building `jlx` from source, including cross-compilation for different platforms, please refer to [README.build.md](./README.build.md)
 
 ---
 

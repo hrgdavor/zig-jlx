@@ -89,6 +89,7 @@ pub fn main() !void {
     }
 
     var processor = processor_mod.Processor.init(allocator, args, &config);
+    defer processor.deinit();
     processor.run() catch |err| {
         std.debug.print("\n[Application Error: {}]\n", .{err});
         std.process.exit(1);

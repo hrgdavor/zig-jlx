@@ -5,7 +5,7 @@
 ## Why Configure?
 
 Every application logs JSON differently. One app might use `ts` for timestamps, while another uses `timestamp` or `time`. Without knowing which key is which, a tool cannot provide rich features like:
-- **Consistent Time Formatting**: Converting varied raw timestamps into readable local time.
+- **Range queries**: We must know which key holds the timestamp, so range filter can be used to for example take only one hour of logs or few specific minutes, whish is much harder to define with regex.
 - **Level-Based Highlighting**: Color-coding lines based on their severity (`info`, `warn`, `error`).
 - **Rich Web Interaction**: The web interface allows for custom JS scripting and deep analysis using browser tools—but only if it knows the structure of your data.
 
@@ -19,7 +19,7 @@ Global settings that apply to the entire `jlx` instance.
 | Key    | Description                            | Example         |
 | :----- | :------------------------------------- | :-------------- |
 | `port` | The port for the web interface server. | `port = 8080`   |
-| `www`  | Path to the web assets directory.      | `www = ./src-js`|
+| `www`  | If you want to customize web ui.       | `www = ./src-js`|
 
 ---
 

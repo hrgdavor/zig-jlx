@@ -26,7 +26,7 @@ pub const LineContext = struct {
     include: []const filter_mod.Filter,
     exclude: []const filter_mod.Filter,
     /// Optional time/date range filter (from -r flag)
-    range_filter: ?filter_mod.RangeFilter,
+    range_filter: ?*filter_mod.RangeFilter,
     /// Seconds east of UTC for display and range matching (from -z flag)
     zone_offset_secs: i64,
     /// Optional value inspection configuration (from -v flag)
@@ -50,20 +50,52 @@ pub const Processor = struct {
     all_found_keys: std.StringHashMap(void),
     /// Persistent buffer for lines that straddle I/O boundaries or exceed 64KB.
     side_buffer: std.ArrayListUnmanaged(u8),
+    /// Single canonical timezone offset for the entire run.
+    zone_offset_secs: i64,
+    /// Optional range filter stored here so it can be mutated (e.g. for time-only resolution)
+    range_filter: ?filter_mod.RangeFilter = null,
 
     pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: *const config_mod.Config) Processor {
-        return .{
+        var self = Processor{
             .allocator = allocator,
             .args = args,
             .config = config,
             .seen_values = std.StringHashMap(void).init(allocator),
             .all_found_keys = std.StringHashMap(void).init(allocator),
             .side_buffer = .{},
+            .zone_offset_secs = 0,
         };
+
+        const folder = self.findFolderConfig();
+        const zone_str: ?[]const u8 = args.zone orelse blk: {
+            if (args.profile) |pname| {
+                if (folder.profiles.get(pname)) |p| {
+                    if (p.zone) |z| break :blk z;
+                }
+            }
+            if (folder.zone) |z| break :blk z;
+            break :blk config.zone;
+        };
+
+        self.zone_offset_secs = if (zone_str) |zs|
+            filter_mod.parseZoneOffset(zs) catch filter_mod.getLocalZoneOffset()
+        else
+            filter_mod.getLocalZoneOffset();
+
+        if (args.range) |rs| {
+            self.range_filter = filter_mod.RangeFilter.parse(rs, self.zone_offset_secs) catch null;
+        }
+
+        return self;
     }
 
     pub fn deinit(self: *Processor) void {
+        var sit = self.seen_values.keyIterator();
+        while (sit.next()) |k| {
+            self.allocator.free(k.*);
+        }
         self.seen_values.deinit();
+
         var it = self.all_found_keys.keyIterator();
         while (it.next()) |k| {
             self.allocator.free(k.*);
@@ -84,18 +116,6 @@ pub const Processor = struct {
         // Resolve config, keys, and filters once — before any line is processed.
         var ctx = try self.buildContext();
         defer ctx.deinit(self.allocator);
-        defer {
-            var it = self.seen_values.keyIterator();
-            while (it.next()) |key| {
-                self.allocator.free(key.*);
-            }
-            self.seen_values.deinit();
-            var kit = self.all_found_keys.keyIterator();
-            while (kit.next()) |key| {
-                self.allocator.free(key.*);
-            }
-            self.all_found_keys.deinit();
-        }
 
         if (self.args.file_path) |path| {
             const file = try std.fs.cwd().openFile(path, .{});
@@ -160,11 +180,8 @@ pub const Processor = struct {
         }
     }
 
-    /// Resolve folder config, apply profile overrides, and build filter lists.
-    /// The returned LineContext owns the filter slices; call deinit when done.
-    pub fn buildContext(self: *Processor) !LineContext {
-        const cfg: *const config_mod.FolderConfig = if (self.args.file_path) |fp| blk: {
-            // File mode: resolve the log file's parent directory and match it against configured paths
+    fn findFolderConfig(self: *const Processor) *const config_mod.FolderConfig {
+        if (self.args.file_path) |fp| {
             var file_real_buf: [4096]u8 = undefined;
             const file_real = std.fs.cwd().realpath(fp, &file_real_buf) catch fp;
             const file_dir = std.fs.path.dirname(file_real) orelse file_real;
@@ -172,7 +189,7 @@ pub const Processor = struct {
             var matched: ?*const config_mod.FolderConfig = null;
             for (self.config.folders.items) |*f| {
                 if (f.paths.len == 0) {
-                    if (matched == null) matched = f; // first pathless section = fallback
+                    if (matched == null) matched = f;
                     continue;
                 }
                 for (f.paths) |path| {
@@ -183,19 +200,17 @@ pub const Processor = struct {
                 }
                 if (matched != null and matched.? == f) break;
             }
-            if (matched == null and self.args.keys) {
-                // If --keys is used, we can proceed without a folder match
-                break :blk &DUMMY_CFG;
-            }
-            break :blk matched orelse return error.NoMatchingFolderConfig;
-        } else blk: {
-            // Stdin mode: no file path — use the first [folders] section unconditionally
-            if (self.config.folders.items.len == 0) {
-                if (self.args.keys) break :blk &DUMMY_CFG;
-                return error.NoFolderConfigDefined;
-            }
-            break :blk &self.config.folders.items[0];
-        };
+            return matched orelse &DUMMY_CFG;
+        } else {
+            if (self.config.folders.items.len > 0) return &self.config.folders.items[0];
+            return &DUMMY_CFG;
+        }
+    }
+
+    /// Resolve folder config, apply profile overrides, and build filter lists.
+    /// The returned LineContext owns the filter slices; call deinit when done.
+    pub fn buildContext(self: *Processor) !LineContext {
+        const cfg = self.findFolderConfig();
 
         // Key and format resolution (profile overrides folder defaults)
         var ts_key = cfg.timestamp_key;
@@ -252,14 +267,8 @@ pub const Processor = struct {
         if (self.args.include) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
         if (self.args.exclude) |s| try exclude_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
 
-        // Zone offset — parsed once, used for range matching and datetime formatting
-        const zone_offset_secs = filter_mod.parseZoneOffset(self.args.zone) catch 0;
-
-        // Optional range filter
-        const range_filter: ?filter_mod.RangeFilter = if (self.args.range) |rs|
-            filter_mod.RangeFilter.parse(rs, zone_offset_secs) catch null
-        else
-            null;
+        // Zone offset resolution: CLI -> Profile -> Folder -> Global -> Local
+        // Already resolved in init()
 
         // Optional value inspection config
         var values_config: ?LineContext.ValuesConfig = null;
@@ -284,15 +293,15 @@ pub const Processor = struct {
             }
         }
 
-        return .{
+        return LineContext{
             .cfg = cfg,
             .ts_key = ts_key,
             .out_fmt = out_fmt,
             .message_expand_fn = msg_expand_fn,
             .include = try include_list.toOwnedSlice(self.allocator),
             .exclude = try exclude_list.toOwnedSlice(self.allocator),
-            .range_filter = range_filter,
-            .zone_offset_secs = zone_offset_secs,
+            .range_filter = if (self.range_filter != null) &self.range_filter.? else null,
+            .zone_offset_secs = self.zone_offset_secs,
             .values_config = values_config,
         };
     }
@@ -450,6 +459,16 @@ pub const Processor = struct {
             if (entry.timestamp) |ts| {
                 // Normalise ms timestamps to seconds
                 const ts_secs: i64 = if (ts > 10_000_000_000) @divTrunc(ts, 1000) else ts;
+
+                if (rf.is_time_only and rf.base_date_secs == null) {
+                    rf.initBaseDate(ts_secs);
+                }
+
+                if (rf.debug and !rf.debug_printed) {
+                    rf.debug_printed = true;
+                    try self.dumpRangeInfo(arena, ts, rf);
+                }
+
                 if (!rf.matches(ts_secs)) return false;
             }
             // If no timestamp field, skip line — we cannot determine if it's in range
@@ -954,6 +973,39 @@ pub const Processor = struct {
         _ = std.mem.replace(u8, input, needle, replacement, new_buf);
 
         return new_buf;
+    }
+
+    fn dumpRangeInfo(self: *Processor, arena: std.mem.Allocator, ts_ms: i64, rf: *const filter_mod.RangeFilter) !void {
+        _ = self;
+        std.debug.print("\r\x1b[2K", .{}); // Clear current line (in case of progress bar)
+        std.debug.print("--- Range Filter Diagnostics (Offset: {d}s) ---\n", .{rf.zone_offset_secs});
+
+        const first_line_fmt = try Processor.formatTimestamp(arena, ts_ms, rf.zone_offset_secs, .datetime);
+        const ts_secs = if (ts_ms > 10_000_000_000) @divTrunc(ts_ms, 1000) else ts_ms;
+        std.debug.print("First line:  {s} (timestamp: {d})\n", .{ first_line_fmt, ts_secs });
+
+        if (rf.from) |from| {
+            const start_secs = switch (from) {
+                .utc_secs => |s| s,
+                .time_only => |t| if (rf.base_date_secs) |base| base + @as(i64, t.hour) * 3600 + @as(i64, t.minute) * 60 + t.second else ts_secs,
+            };
+            const start_fmt = try Processor.formatTimestamp(arena, start_secs * 1000, rf.zone_offset_secs, .datetime);
+            std.debug.print("Range Start: {s} (timestamp: {d})\n", .{ start_fmt, start_secs });
+        } else {
+            std.debug.print("Range Start: [open]\n", .{});
+        }
+
+        if (rf.to) |to| {
+            const end_secs = switch (to) {
+                .utc_secs => |s| s,
+                .time_only => |t| if (rf.base_date_secs) |base| base + @as(i64, t.hour) * 3600 + @as(i64, t.minute) * 60 + t.second else ts_secs,
+            };
+            const end_fmt = try Processor.formatTimestamp(arena, end_secs * 1000, rf.zone_offset_secs, .datetime);
+            std.debug.print("Range End:   {s} (timestamp: {d})\n", .{ end_fmt, end_secs });
+        } else {
+            std.debug.print("Range End:   [open]\n", .{});
+        }
+        std.debug.print("-------------------------------\n", .{});
     }
 };
 

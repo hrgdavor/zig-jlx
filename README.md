@@ -4,7 +4,7 @@ A fast command-line utility for reading and formatting structured JSON log files
 
 Reason for existence is to be able to write logs as JSON without sacrificing readability from shell. And then it gets even better as much more is within reach when log is structured.
 
-Each log line can be optionally be preceded by arbitrary text (the first `{` marks the start of JSON). Lines that are not contain valid JSON (starting at first `{` until end of line) are silently skipped.
+It is flexible so a log line can be preceded by arbitrary text as the first `{` is considered start of JSON. Lines that do not contain valid JSON (starting at first `{` until end of line) are silently skipped.
 
 ---
 
@@ -15,6 +15,8 @@ For instructions on building `jlx` from source, including cross-compilation for 
 ---
 
 ## Usage
+
+Demo page: https://hrgdavor.github.io/zig-jlx/
 
 ```
 jlx -c <config> [options] [file]
@@ -314,19 +316,25 @@ The `-r` / `--range` flag allows filtering logs by their timestamp or selecting 
 When using `-N`, `jlx` performs a **SIMD-optimized backward scan** from the end of the file to find the correct offset efficiently without reading the entire file.
 
 ### Time Range Syntax
-- `HH:MM:SS..HH:MM:SS` (time-only: matches time-of-day in the configured timezone)
-- `YYYY-MM-DD HH:MM:SS..YYYY-MM-DD HH:MM:SS` (datetime: specific absolute range)
+- `HH:MM[:SS]..HH:MM[:SS]` (time-only: matches time-of-day in the configured timezone)
+- `YYYY-MM-DD HH:MM[:SS]..YYYY-MM-DD HH:MM[:SS]` (datetime: specific absolute range)
 - Either side can be omitted: `..09:00` (until 9 AM), `2024-01-01..` (from Jan 1st)
 
-### Timezone Support
+> [!IMPORTANT]
+> **Time-only ranges** are anchored to the "today" (midnight) of the **first log line encountered**. If you are filtering logs that span multiple days using `10:00..11:00`, it will only match entries on that first day's 10:00-11:00 slot. For multi-day filtering, use full datetime strings.
 
+### Diagnostics (`?` prefix)
+If your range filter isn't matching what you expect, prefix the range string with `?` to enable diagnostic output on stderr:
+`jlx -r "?10:00..11:00" app.log`
+
+This will dump the calculated range timestamps and the detected/configured timezone offset when the first log line is processed.
+
+### Timezone Support
 Use `-z` / `--zone` to specify the timezone offset (e.g., `+01:00`, `-05:00`).
-- Affects how time-only ranges are interpreted.
-- Affects the output of `{timestamp:datetime}`.
-- Defaults to UTC if omitted.
+- **Single Source of Truth**: The resolved timezone (CLI > Profile > Folder > Global > System Local) is applied uniformly to all range calculations and `{timestamp:datetime}` formatting.
+- **Local Fallback**: If no zone is provided, `jlx` automatically detects your system's local timezone.
 
 ### Range Examples
-
 ```sh
 # Only logs between 8:00 and 9:30 AM (local time)
 jlx -c app.conf -r "08:00..09:30" app.log
@@ -334,8 +342,8 @@ jlx -c app.conf -r "08:00..09:30" app.log
 # Logs from a specific date onwards
 jlx -c app.conf -r "2024-02-19.." app.log
 
-# Combine range with includes and timezone
-jlx -c app.conf -z "+02:00" -r "10:00..11:00" -i ERROR app.log
+# Debug why a range isn't matching
+jlx -c app.conf -r "?10:00..11:00" app.log
 ```
 
 ---

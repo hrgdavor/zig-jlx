@@ -107,6 +107,9 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+    if (target.result.os.tag == .linux or target.result.os.tag == .macos) {
+        exe.linkLibC();
+    }
 
     if (target.result.os.tag != .linux) {
         const xev_dep = b.dependency("libxev", .{
@@ -159,6 +162,9 @@ pub fn build(b: *std.Build) void {
     const mod_tests = b.addTest(.{
         .root_module = mod,
     });
+    if (target.result.os.tag == .linux or target.result.os.tag == .macos) {
+        mod_tests.linkLibC();
+    }
 
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);

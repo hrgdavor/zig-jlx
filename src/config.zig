@@ -10,6 +10,7 @@ pub const Profile = struct {
     logger_key: ?[]const u8 = null,
     trace_key: ?[]const u8 = null,
     message_expand: ?[]const u8 = null,
+    zone: ?[]const u8 = null,
     /// Raw filter strings parsed from config (include = ...)
     include_filters: [][]const u8 = &[_][]const u8{},
     /// Raw filter strings parsed from config (exclude = ...)
@@ -25,6 +26,7 @@ pub const FolderConfig = struct {
     logger_key: []const u8 = "logger",
     trace_key: []const u8 = "trace",
     message_expand: ?[]const u8 = null,
+    zone: ?[]const u8 = null,
     output_format: []const u8 = "{timestamp} {level} {message}",
     profiles: std.StringHashMap(Profile),
     /// Raw filter strings from config (include = ...)
@@ -36,6 +38,7 @@ pub const FolderConfig = struct {
 pub const Config = struct {
     port: ?u16 = null,
     www: ?[]const u8 = null,
+    zone: ?[]const u8 = null,
     folders: std.ArrayListUnmanaged(FolderConfig) = .{},
     allocator: std.mem.Allocator,
 
@@ -97,6 +100,7 @@ pub const Config = struct {
                         if (std.mem.eql(u8, key, "level")) p.level_key = try self.allocator.dupe(u8, val);
                         if (std.mem.eql(u8, key, "message")) p.message_key = try self.allocator.dupe(u8, val);
                         if (std.mem.eql(u8, key, "message_expand")) p.message_expand = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "zone")) p.zone = try self.allocator.dupe(u8, val);
                         if (std.mem.eql(u8, key, "include")) p.include_filters = try parseFilterList(self.allocator, val);
                         if (std.mem.eql(u8, key, "exclude")) p.exclude_filters = try parseFilterList(self.allocator, val);
                     } else if (current_folder) |f| {
@@ -115,6 +119,8 @@ pub const Config = struct {
                             f.message_key = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "message_expand")) {
                             f.message_expand = try self.allocator.dupe(u8, val);
+                        } else if (std.mem.eql(u8, key, "zone")) {
+                            f.zone = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "output")) {
                             f.output_format = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "include")) {
@@ -131,6 +137,8 @@ pub const Config = struct {
                             };
                         } else if (std.mem.eql(u8, key, "www")) {
                             self.www = try self.allocator.dupe(u8, val);
+                        } else if (std.mem.eql(u8, key, "zone")) {
+                            self.zone = try self.allocator.dupe(u8, val);
                         }
                     }
                 }

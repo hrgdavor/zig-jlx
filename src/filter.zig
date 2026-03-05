@@ -1,4 +1,41 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const w = std.os.windows;
+const TZI = if (builtin.os.tag == .windows) extern struct {
+    Bias: i32,
+    StandardName: [32]u16,
+    StandardDate: [8]u16,
+    StandardBias: i32,
+    DaylightName: [32]u16,
+    DaylightDate: [8]u16,
+    DaylightBias: i32,
+} else struct {};
+
+const kernel32 = if (builtin.os.tag == .windows) struct {
+    pub extern "kernel32" fn GetTimeZoneInformation(lpTimeZoneInformation: *TZI) callconv(.c) u32;
+} else struct {};
+
+const Tm = extern struct {
+    sec: i32,
+    min: i32,
+    hour: i32,
+    mday: i32,
+    mon: i32,
+    year: i32,
+    wday: i32,
+    yday: i32,
+    isdst: i32,
+    gmtoff: i64 = 0,
+    zone: ?[*]const u8 = null,
+};
+
+const posix = if (builtin.os.tag != .windows) struct {
+    pub extern "c" fn time(?[*]i64) i64;
+    pub extern "c" fn localtime_r(*const i64, *Tm) ?*Tm;
+    pub extern "c" fn gmtime_r(*const i64, *Tm) ?*Tm;
+    pub extern "c" fn mktime(*Tm) i64;
+} else struct {};
 
 const mvzr = @import("mvzr");
 
@@ -184,25 +221,56 @@ pub const RangeFilter = struct {
     from: ?TimeBound = null,
     to: ?TimeBound = null,
     zone_offset_secs: i64 = 0,
+    is_time_only: bool = false,
+    base_date_secs: ?i64 = null,
+    debug: bool = false,
+    debug_printed: bool = false,
 
     /// Parse "from..to", "from..", or "..to".
     /// zone_offset_secs is the user's local zone in seconds east of UTC.
     pub fn parse(text: []const u8, zone_offset_secs: i64) !RangeFilter {
-        const sep = std.mem.indexOf(u8, text, "..") orelse return error.InvalidRangeSyntax;
-        const from_str = std.mem.trim(u8, text[0..sep], " ");
-        const to_str = std.mem.trim(u8, text[sep + 2 ..], " ");
+        var input = text;
+        var debug = false;
+        if (input.len > 0 and input[0] == '?') {
+            debug = true;
+            input = input[1..];
+        }
+
+        const sep = std.mem.indexOf(u8, input, "..") orelse return error.InvalidRangeSyntax;
+        const from_str = std.mem.trim(u8, input[0..sep], " ");
+        const to_str = std.mem.trim(u8, input[sep + 2 ..], " ");
+        const from = if (from_str.len > 0) try parseBound(from_str, zone_offset_secs) else null;
+        const to = if (to_str.len > 0) try parseBound(to_str, zone_offset_secs) else null;
+
+        var is_time_only = true;
+        if (from) |b| if (b == .utc_secs) {
+            is_time_only = false;
+        };
+        if (to) |b| if (b == .utc_secs) {
+            is_time_only = false;
+        };
+
         return .{
-            .from = if (from_str.len > 0) try parseBound(from_str, zone_offset_secs) else null,
-            .to = if (to_str.len > 0) try parseBound(to_str, zone_offset_secs) else null,
+            .from = from,
+            .to = to,
             .zone_offset_secs = zone_offset_secs,
+            .is_time_only = is_time_only,
+            .debug = debug,
         };
     }
 
     /// Returns true when the given UTC unix timestamp (seconds) falls in the range.
-    pub fn matches(self: RangeFilter, ts_secs: i64) bool {
-        if (self.from) |b| if (!checkBound(b, ts_secs, self.zone_offset_secs, .from)) return false;
-        if (self.to) |b| if (!checkBound(b, ts_secs, self.zone_offset_secs, .to)) return false;
+    pub fn matches(self: *const RangeFilter, ts_secs: i64) bool {
+        if (self.from) |b| if (!self.checkBound(b, ts_secs, .from)) return false;
+        if (self.to) |b| if (!self.checkBound(b, ts_secs, .to)) return false;
         return true;
+    }
+
+    /// Set the base date for time-only ranges based on an absolute timestamp.
+    pub fn initBaseDate(self: *RangeFilter, ts_secs: i64) void {
+        const local = ts_secs + self.zone_offset_secs;
+        const day_sec = @mod(local, 86400);
+        self.base_date_secs = local - day_sec - self.zone_offset_secs;
     }
 
     // -- private helpers ----------------------------------------------------
@@ -218,8 +286,11 @@ pub const RangeFilter = struct {
     fn parseTimeOnly(text: []const u8) !TimeOfDay {
         var it = std.mem.splitScalar(u8, text, ':');
         const h = try std.fmt.parseInt(u8, it.next() orelse return error.InvalidTime, 10);
+        if (h > 23) return error.InvalidTimestamp;
         const m = try std.fmt.parseInt(u8, it.next() orelse return error.InvalidTime, 10);
+        if (m > 59) return error.InvalidTimestamp;
         const s: u8 = if (it.next()) |sv| try std.fmt.parseInt(u8, sv, 10) else 0;
+        if (s > 59) return error.InvalidTimestamp;
         return .{ .hour = h, .minute = m, .second = s };
     }
 
@@ -265,15 +336,20 @@ pub const RangeFilter = struct {
 
     const BoundSide = enum { from, to };
 
-    fn checkBound(bound: TimeBound, ts_secs: i64, zone_offset_secs: i64, side: BoundSide) bool {
+    fn checkBound(self: *const RangeFilter, bound: TimeBound, ts_secs: i64, side: BoundSide) bool {
         switch (bound) {
             .utc_secs => |b| return if (side == .from) ts_secs >= b else ts_secs <= b,
             .time_only => |t| {
-                // Shift log timestamp to local time, then take time-of-day
-                const local = ts_secs + zone_offset_secs;
-                const day_sec = @mod(local, 86400);
-                const bound_sec: i64 = @as(i64, t.hour) * 3600 + @as(i64, t.minute) * 60 + t.second;
-                return if (side == .from) day_sec >= bound_sec else day_sec <= bound_sec;
+                if (self.base_date_secs) |base| {
+                    const bound_utc = base + @as(i64, t.hour) * 3600 + @as(i64, t.minute) * 60 + t.second;
+                    return if (side == .from) ts_secs >= bound_utc else ts_secs <= bound_utc;
+                } else {
+                    // Shift log timestamp to local time, then take time-of-day
+                    const local = ts_secs + self.zone_offset_secs;
+                    const day_sec = @mod(local, 86400);
+                    const bound_sec: i64 = @as(i64, t.hour) * 3600 + @as(i64, t.minute) * 60 + t.second;
+                    return if (side == .from) day_sec >= bound_sec else day_sec <= bound_sec;
+                }
             },
         }
     }
@@ -295,4 +371,169 @@ pub fn parseZoneOffset(zone: ?[]const u8) !i64 {
     const h = try std.fmt.parseInt(i64, it.next() orelse return error.InvalidZone, 10);
     const m: i64 = if (it.next()) |mv| try std.fmt.parseInt(i64, mv, 10) else 0;
     return sign * (h * 3600 + m * 60);
+}
+
+/// Detect local timezone offset in seconds east of UTC.
+pub fn getLocalZoneOffset() i64 {
+    if (builtin.os.tag == .windows) {
+        var tzi: TZI = undefined;
+        const res = kernel32.GetTimeZoneInformation(&tzi);
+        if (res == 0xFFFFFFFF) return 0;
+        const bias: i32 = if (res == 2) tzi.Bias + tzi.DaylightBias else tzi.Bias + tzi.StandardBias;
+        return @as(i64, -bias) * 60;
+    } else if (builtin.os.tag == .linux or builtin.os.tag == .macos) {
+        var t = posix.time(null);
+        var tm: Tm = undefined;
+        _ = posix.gmtime_r(&t, &tm);
+        tm.isdst = -1; // Let mktime determine if DST applies to this UTC component treated as local
+        const t_utc_as_local = posix.mktime(&tm);
+        return t - t_utc_as_local;
+    }
+    return 0;
+}
+
+test "RangeFilter time-only resolution" {
+    // Use 12:00..13:00 range
+    var rf = try RangeFilter.parse("12:00..13:00", 0);
+    try std.testing.expect(rf.is_time_only);
+    try std.testing.expect(rf.base_date_secs == null);
+
+    // First line at 2024-03-05 10:00:00 UTC (1709632800)
+    const first_ts: i64 = 1709632800;
+    rf.initBaseDate(first_ts);
+
+    // Base date should be 2024-03-05 00:00:00 UTC (1709596800)
+    try std.testing.expectEqual(@as(?i64, 1709596800), rf.base_date_secs);
+
+    // 12:30:00 on the same day should match
+    const same_day_match = 1709596800 + 12 * 3600 + 30 * 60;
+    try std.testing.expect(rf.matches(same_day_match));
+
+    // 12:30:00 on the NEXT day should NOT match (because it is locked to the first day)
+    const next_day_no_match = same_day_match + 86400;
+    try std.testing.expect(!rf.matches(next_day_no_match));
+}
+
+test "RangeFilter absolute datetime" {
+    // 2024-03-05 12:00:00 to 2024-03-05 13:00:00 UTC
+    // 1709640000 to 1709643600
+    const rf = try RangeFilter.parse("2024-03-05 12:00:00..2024-03-05 13:00:00", 0);
+    try std.testing.expect(!rf.is_time_only);
+
+    try std.testing.expect(rf.matches(1709640000)); // Exact start
+    try std.testing.expect(rf.matches(1709641800)); // Middle (12:30)
+    try std.testing.expect(rf.matches(1709643600)); // Exact end
+    try std.testing.expect(!rf.matches(1709639999)); // Just before
+    try std.testing.expect(!rf.matches(1709643601)); // Just after
+}
+
+test "RangeFilter open-ended" {
+    // 1. Open start: ..2024-03-05 12:00:00
+    const rf_to = try RangeFilter.parse("..2024-03-05 12:00:00", 0);
+    try std.testing.expect(rf_to.matches(0)); // Far past
+    try std.testing.expect(rf_to.matches(1709640000)); // Exact end
+    try std.testing.expect(!rf_to.matches(1709640001)); // Just after
+
+    // 2. Open end: 2024-03-05 12:00:00..
+    const rf_from = try RangeFilter.parse("2024-03-05 12:00:00..", 0);
+    try std.testing.expect(!rf_from.matches(1709639999));
+    try std.testing.expect(rf_from.matches(1709640000));
+    try std.testing.expect(rf_from.matches(2000000000)); // Far future
+
+    // 3. Time-only open end: 12:00..
+    var rf_time = try RangeFilter.parse("12:00..", 0);
+    rf_time.initBaseDate(1709632800); // March 5th
+    try std.testing.expect(rf_time.matches(1709640000)); // 12:00 matches
+    try std.testing.expect(rf_time.matches(1709643600)); // 13:00 matches
+    try std.testing.expect(!rf_time.matches(1709639999)); // 11:59 fails
+
+    // 4. Regression: jlx -r "?10:12:59..10:13:01"
+    // First line: 2026-02-10 07:27:51 UTC (timestamp: 1770708471)
+    // Range expected: 10:12:59..10:13:01 UTC
+    var rf_bug = try RangeFilter.parse("10:12:59..10:13:01", 0);
+    rf_bug.initBaseDate(1770708471);
+
+    // Expecting:
+    // midnight = 1770681600
+    // start = 1770681600 + 10*3600 + 12*60 + 59 = 1770718379
+    // end   = 1770681600 + 10*3600 + 13*60 + 1  = 1770718381
+
+    try std.testing.expect(!rf_bug.matches(1770708471)); // 07:27 is before 10:12
+    try std.testing.expect(rf_bug.matches(1770718379)); // 10:12:59 exact match
+    try std.testing.expect(rf_bug.matches(1770718380)); // 10:13:00 in range
+    try std.testing.expect(rf_bug.matches(1770718381)); // 10:13:01 exact match
+    try std.testing.expect(!rf_bug.matches(1770718382)); // 10:13:02 out of range
+}
+
+test "RangeFilter timezone awareness" {
+    // Range 12:00..13:00 in UTC+2 (7200s)
+    // Local 12:00..13:00 is UTC 10:00..11:00
+    // UTC 10:00 = 1709632800
+    // UTC 11:00 = 1709636400
+    const rf = try RangeFilter.parse("2024-03-05 12:00:00..2024-03-05 13:00:00", 7200);
+
+    try std.testing.expect(rf.matches(1709632800)); // UTC 10:00
+    try std.testing.expect(rf.matches(1709634600)); // UTC 10:30
+    try std.testing.expect(rf.matches(1709636400)); // UTC 11:00
+    try std.testing.expect(!rf.matches(1709640000)); // UTC 12:00 (which is local 14:00)
+}
+
+test "RangeFilter parse debug flag" {
+    const rf = try RangeFilter.parse("?12:00..13:00", 0);
+    try std.testing.expect(rf.debug);
+    try std.testing.expect(rf.is_time_only);
+
+    const rf2 = try RangeFilter.parse("12:00..13:00", 0);
+    try std.testing.expect(!rf2.debug);
+}
+
+test "RangeFilter base date calculation logic" {
+    // 1. UTC+1 (3600s)
+    var rf1 = RangeFilter{ .zone_offset_secs = 3600 };
+    // ts_secs = 1770708471 (2026-02-10 07:27:51 UTC, 08:27:51 local)
+    rf1.initBaseDate(1770708471);
+    // local midnight = 2026-02-10 00:00:00 local = 2026-02-09 23:00:00 UTC = 1770678000
+    try std.testing.expectEqual(@as(i64, 1770678000), rf1.base_date_secs.?);
+
+    // 2. UTC-5 (-18000s)
+    var rf2 = RangeFilter{ .zone_offset_secs = -18000 };
+    rf2.initBaseDate(1770708471); // Feb 10 07:27 UTC -> Feb 10 02:27 local
+    // local midnight = 2026-02-10 00:00:00 local = 2026-02-10 05:00:00 UTC = 1770699600
+    try std.testing.expectEqual(@as(i64, 1770699600), rf2.base_date_secs.?);
+}
+
+test "RangeFilter complex time-only ranges" {
+    // 1. Range spanning midnight: 23:00..01:00
+    // If base date is 2024-03-05 (midnight = 1709596800 UTC)
+    // 23:00 = 1709596800 + 23*3600 = 1709679600
+    // 01:00 = 1709596800 + 1*3600 = 1709600400 (Wait, 01:00 is technically "next day" if it follows 23:00)
+    // Actually, our current implementation just adds seconds to midnight.
+    // So 01:00 is indeed 1709600400 (BEFORE 23:00).
+    // If start > end, it's an empty range in current logic unless we handle wrap-around.
+    // Let's verify what happens.
+    var rf = try RangeFilter.parse("23:00..01:00", 0);
+    rf.initBaseDate(1709632800);
+
+    // In our current implementation:
+    // start_secs = 23 * 3600 = 82800
+    // end_secs = 1 * 3600 = 3600
+    // matches(ts) -> (ts >= base + 82800) and (ts <= base + 3600) -> impossible for same base.
+    try std.testing.expect(!rf.matches(1709679600)); // 23:00
+    try std.testing.expect(!rf.matches(1709600400)); // 01:00 (today)
+}
+
+test "RangeFilter invalid strings" {
+    try std.testing.expectError(error.InvalidRangeSyntax, RangeFilter.parse("abc", 0));
+    try std.testing.expectError(error.InvalidRangeSyntax, RangeFilter.parse("10:00", 0)); // No separator
+    try std.testing.expectError(error.InvalidTimestamp, RangeFilter.parse("10:00..25:00", 0)); // Invalid time
+}
+
+test "RangeFilter datetime with timezone shift" {
+    // 2024-03-05 10:00 UTC+0 = 1709632800
+    // 2024-03-05 10:00 UTC+2 = 1709625600
+    const rf = try RangeFilter.parse("2024-03-05 10:00:00..2024-03-05 12:00:00", 7200); // UTC+2
+
+    try std.testing.expect(rf.matches(1709625600)); // 10:00 local
+    try std.testing.expect(rf.matches(1709632800)); // 12:00 local is UTC 10:00 -> 1709632800
+    try std.testing.expect(!rf.matches(1709632801));
 }

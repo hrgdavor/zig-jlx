@@ -1,0 +1,58 @@
+[
+    {
+        "name": "basic object",
+        "line": "{\"level\": \"INFO\", \"msg\": \"hello\"}",
+        "expected": {
+            "level": "\"INFO\"",
+            "msg": "\"hello\""
+        }
+    },
+    {
+        "name": "with leading text",
+        "line": "2024-03-05 12:00:00 [main] {\"level\": \"DEBUG\", \"msg\": \"verbose\"}",
+        "expected": {
+            "level": "\"DEBUG\"",
+            "msg": "\"verbose\""
+        }
+    },
+    {
+        "name": "nested objects and arrays",
+        "line": "{\"meta\": {\"id\": 123}, \"tags\": [\"a\", \"b\"]}",
+        "expected": {
+            "meta": "{\"id\": 123}",
+            "tags": "[\"a\", \"b\"]"
+        }
+    },
+    {
+        "name": "escaped characters",
+        "line": "{\"message\": \"Finished \\\"task\\\" successfully\"}",
+        "expected": {
+            "message": "\"Finished \\\"task\\\" successfully\""
+        }
+    },
+    {
+        "name": "primitives",
+        "line": "{\"ok\": true, \"count\": 42, \"val\": null}",
+        "expected": {
+            "ok": "true",
+            "count": "42",
+            "val": "null"
+        }
+    },
+    {
+        "name": "trailing commas/spaces (tolerant)",
+        "line": "{\"a\": 1, \"b\": 2  }",
+        "expected": {
+            "a": "1",
+            "b": "2"
+        }
+    },
+    {
+        "name": "complex nested",
+        "line": "{\"a\": [{\"b\": 1}], \"c\": {\"d\": [2, 3]}}",
+        "expected": {
+            "a": "[{\"b\": 1}]",
+            "c": "{\"d\": [2, 3]}"
+        }
+    }
+]

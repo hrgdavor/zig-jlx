@@ -78,5 +78,5 @@ zig build -Doptimize=ReleaseSafe -Dtarget=aarch64-macos
 ### Running tests
 
 ```sh
-zig build test
+zig build test --summary all
 ```

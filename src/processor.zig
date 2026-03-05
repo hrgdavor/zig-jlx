@@ -43,13 +43,13 @@ pub const LineContext = struct {
 pub const Processor = struct {
     allocator: std.mem.Allocator,
     args: args_mod.Args,
-    config: config_mod.Config,
+    config: *const config_mod.Config,
     /// Track seen values for the -v option.
     seen_values: std.StringHashMap(void),
     /// Unique keys found during --keys run
     all_found_keys: std.StringHashMap(void),
 
-    pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: config_mod.Config) Processor {
+    pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: *const config_mod.Config) Processor {
         return .{
             .allocator = allocator,
             .args = args,
@@ -57,6 +57,15 @@ pub const Processor = struct {
             .seen_values = std.StringHashMap(void).init(allocator),
             .all_found_keys = std.StringHashMap(void).init(allocator),
         };
+    }
+
+    pub fn deinit(self: *Processor) void {
+        self.seen_values.deinit();
+        var it = self.all_found_keys.keyIterator();
+        while (it.next()) |k| {
+            self.allocator.free(k.*);
+        }
+        self.all_found_keys.deinit();
     }
 
     pub fn run(self: *Processor) !void {
@@ -919,3 +928,79 @@ pub const Processor = struct {
         return new_buf;
     }
 };
+
+test "Processor.processLine with shared samples" {
+    const allocator = std.testing.allocator;
+    const fs = std.fs.cwd();
+
+    const file = try fs.openFile("test/processor_samples.json", .{});
+    defer file.close();
+
+    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    defer allocator.free(content);
+
+    const Sample = struct {
+        name: []const u8,
+        config: []const u8,
+        args: struct {
+            profile: ?[]const u8 = null,
+            include: ?[]const u8 = null,
+            exclude: ?[]const u8 = null,
+            range: ?[]const u8 = null,
+            zone: ?[]const u8 = null,
+            passthrough: bool = false,
+        },
+        line: []const u8,
+        expected: ?[]const u8,
+    };
+
+    const parsed_json = try std.json.parseFromSlice([]Sample, allocator, content, .{ .ignore_unknown_fields = true });
+    defer parsed_json.deinit();
+
+    for (parsed_json.value) |sample| {
+        var config_arena = std.heap.ArenaAllocator.init(allocator);
+        defer config_arena.deinit();
+        var cfg = config_mod.Config.init(config_arena.allocator());
+        try cfg.parse(sample.config);
+
+        const args = args_mod.Args{
+            .profile = sample.args.profile,
+            .include = sample.args.include,
+            .exclude = sample.args.exclude,
+            .range = sample.args.range,
+            .zone = sample.args.zone,
+            .passthrough = sample.args.passthrough,
+        };
+
+        var processor = Processor.init(allocator, args, &cfg);
+        defer processor.deinit();
+        // Note: buildContext expects self.args.file_path to be null for stdin mode (first folders section)
+        var ctx = try processor.buildContext();
+        defer ctx.deinit(allocator);
+
+        var arena_instance = std.heap.ArenaAllocator.init(allocator);
+        defer arena_instance.deinit();
+        const arena = arena_instance.allocator();
+
+        var out_buf: [4096]u8 = undefined;
+        var fbs = std.io.fixedBufferStream(&out_buf);
+        const writer = fbs.writer();
+
+        const matched = try processor.processLine(arena, sample.line, writer, &ctx);
+
+        if (sample.expected) |expected| {
+            if (!matched) {
+                std.debug.print("Sample '{s}' expected match but got none\n", .{sample.name});
+                return error.ExpectedMatch;
+            }
+            // Output includes newline
+            const actual = std.mem.trimRight(u8, fbs.getWritten(), "\n\r");
+            try std.testing.expectEqualStrings(expected, actual);
+        } else {
+            if (matched) {
+                std.debug.print("Sample '{s}' expected no match but got one: {s}\n", .{ sample.name, fbs.getWritten() });
+                return error.ExpectedNoMatch;
+            }
+        }
+    }
+}

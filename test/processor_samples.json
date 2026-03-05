@@ -1,0 +1,72 @@
+[
+    {
+        "name": "basic formatting",
+        "config": "[folders]\noutput = {level} | {message}\n",
+        "args": {},
+        "line": "{\"level\": \"INFO\", \"message\": \"test message\"}",
+        "expected": "INFO | test message"
+    },
+    {
+        "name": "timestamp formatting",
+        "config": "[folders]\ntimestamp = ts\noutput = {timestamp:time} {level}: {message}\n",
+        "args": {
+            "zone": "UTC"
+        },
+        "line": "{\"ts\": 1709539200000, \"level\": \"INFO\", \"message\": \"at 8am\"}",
+        "expected": "08:00:00 INFO: at 8am"
+    },
+    {
+        "name": "global inclusion filter",
+        "config": "[folders]\noutput = {level}: {message}\n",
+        "args": {
+            "include": "ERROR"
+        },
+        "line": "{\"level\": \"INFO\", \"message\": \"skip me\"}",
+        "expected": null
+    },
+    {
+        "name": "key-specific exclusion filter",
+        "config": "[folders]\noutput = {level}: {message}\n",
+        "args": {
+            "exclude": "level:DEBUG"
+        },
+        "line": "{\"level\": \"DEBUG\", \"message\": \"filtered\"}",
+        "expected": null
+    },
+    {
+        "name": "range filter (match)",
+        "config": "[folders]\ntimestamp = ts\noutput = {level}: {message}\n",
+        "args": {
+            "range": "08:00..09:00",
+            "zone": "UTC"
+        },
+        "line": "{\"ts\": 28800, \"level\": \"INFO\", \"message\": \"in range\"}",
+        "expected": "INFO: in range"
+    },
+    {
+        "name": "range filter (skip)",
+        "config": "[folders]\ntimestamp = ts\noutput = {level}: {message}\n",
+        "args": {
+            "range": "08:00..09:00",
+            "zone": "UTC"
+        },
+        "line": "{\"ts\": 36000, \"level\": \"INFO\", \"message\": \"out of range\"}",
+        "expected": null
+    },
+    {
+        "name": "profile override",
+        "config": "[folders]\noutput = {level}: {message}\n[profile.verbose]\noutput = [{level}] ({logger}): {message}\n",
+        "args": {
+            "profile": "verbose"
+        },
+        "line": "{\"level\": \"INFO\", \"logger\": \"auth\", \"message\": \"logged in\"}",
+        "expected": "[INFO] (auth): logged in"
+    },
+    {
+        "name": "multiline/nested formatting (json values)",
+        "config": "[folders]\noutput = {level}: {meta}\n",
+        "args": {},
+        "line": "{\"level\": \"INFO\", \"meta\": {\"id\": 123, \"ok\": true}}",
+        "expected": "INFO: {\"id\": 123, \"ok\": true}"
+    }
+]

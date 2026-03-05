@@ -51,3 +51,45 @@ pub fn parseTimestamp(val_str: []const u8) ?i64 {
     }
     return ts;
 }
+
+test "Parser.parseLine with shared samples" {
+    const allocator = std.testing.allocator;
+    const fs = std.fs.cwd();
+
+    const file = try fs.openFile("test/parser_samples.json", .{});
+    defer file.close();
+
+    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    defer allocator.free(content);
+
+    const Sample = struct {
+        name: []const u8,
+        line: []const u8,
+        expected: std.json.Value,
+    };
+
+    const parsed_json = try std.json.parseFromSlice([]Sample, allocator, content, .{ .ignore_unknown_fields = true });
+    defer parsed_json.deinit();
+
+    for (parsed_json.value) |sample| {
+        const entry_opt = try parseLine(allocator, sample.line, "ts");
+        if (entry_opt == null) {
+            std.debug.print("Failed to parse sample: {s}\n", .{sample.name});
+            try std.testing.expect(false);
+        }
+        var entry = entry_opt.?;
+        defer entry.deinit(allocator);
+
+        const expected_obj = sample.expected.object;
+        var it = expected_obj.iterator();
+        while (it.next()) |kv| {
+            const key = kv.key_ptr.*;
+            const expected_val = kv.value_ptr.string;
+            const actual_val = entry.parsed.get(key) orelse {
+                std.debug.print("Key '{s}' not found in sample: {s}\n", .{ key, sample.name });
+                return error.KeyNotFound;
+            };
+            try std.testing.expectEqualStrings(expected_val, actual_val);
+        }
+    }
+}

@@ -72,6 +72,7 @@ pub fn main() !void {
     }
 
     var config = config_mod.Config.init(parse_allocator);
+    defer config.deinit();
 
     if (args.config) |path| {
         try config.load(path);
@@ -82,12 +83,12 @@ pub fn main() !void {
         if (final_args.port == null) final_args.port = config.port orelse 3000;
         if (final_args.www == null) final_args.www = config.www;
 
-        var server = server_mod.Server.init(allocator, final_args, config);
+        var server = server_mod.Server.init(allocator, final_args, &config);
         try server.run();
         return;
     }
 
-    var processor = processor_mod.Processor.init(allocator, args, config);
+    var processor = processor_mod.Processor.init(allocator, args, &config);
     processor.run() catch |err| {
         std.debug.print("\n[Application Error: {}]\n", .{err});
         std.process.exit(1);

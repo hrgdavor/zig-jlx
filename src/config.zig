@@ -36,14 +36,17 @@ pub const FolderConfig = struct {
 pub const Config = struct {
     port: ?u16 = null,
     www: ?[]const u8 = null,
-    folders: std.array_list.AlignedManaged(FolderConfig, null),
-    arena_allocator: std.mem.Allocator,
+    folders: std.ArrayListUnmanaged(FolderConfig) = .{},
+    allocator: std.mem.Allocator,
 
-    pub fn init(arena_allocator: std.mem.Allocator) Config {
+    pub fn init(allocator: std.mem.Allocator) Config {
         return .{
-            .folders = std.array_list.AlignedManaged(FolderConfig, null).init(arena_allocator),
-            .arena_allocator = arena_allocator,
+            .allocator = allocator,
         };
+    }
+
+    pub fn deinit(self: *Config) void {
+        self.folders.deinit(self.allocator);
     }
 
     pub fn load(self: *Config, path: []const u8) !void {
@@ -51,31 +54,35 @@ pub const Config = struct {
             std.debug.print("Critical error: could not open {s} ({})", .{ path, err });
             std.process.exit(1);
         };
-
         defer file.close();
 
-        var read_buf: [4096]u8 = undefined;
-        var reader = file.reader(&read_buf);
+        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024);
+        try self.parse(content);
+    }
+
+    pub fn parse(self: *Config, content: []const u8) !void {
+        var fbs = std.io.fixedBufferStream(content);
+        var reader = fbs.reader();
 
         var current_folder: ?*FolderConfig = null;
         var current_profile: ?*Profile = null;
 
-        while (true) {
-            const line = (try reader.interface.takeDelimiter('\n')) orelse break;
+        var buf: [4096]u8 = undefined;
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
             const trimmed = std.mem.trim(u8, line, " \r\t");
             if (trimmed.len == 0 or trimmed[0] == ';') continue;
 
             if (std.mem.eql(u8, trimmed, "[folders]")) {
-                try self.folders.append(.{
+                try self.folders.append(self.allocator, .{
                     .paths = &[_][]const u8{},
-                    .profiles = std.StringHashMap(Profile).init(self.arena_allocator),
+                    .profiles = std.StringHashMap(Profile).init(self.allocator),
                 });
                 current_folder = &self.folders.items[self.folders.items.len - 1];
                 current_profile = null;
             } else if (std.mem.startsWith(u8, trimmed, "[profile.") and trimmed[trimmed.len - 1] == ']') {
                 if (current_folder) |f| {
                     const pname = trimmed[9 .. trimmed.len - 1];
-                    const pname_dupe = try self.arena_allocator.dupe(u8, pname);
+                    const pname_dupe = try self.allocator.dupe(u8, pname);
                     try f.profiles.put(pname_dupe, .{ .name = pname_dupe });
                     current_profile = f.profiles.getPtr(pname_dupe).?;
                 }
@@ -85,35 +92,35 @@ pub const Config = struct {
                     const val = std.mem.trim(u8, trimmed[idx + 1 ..], " ");
 
                     if (current_profile) |p| {
-                        if (std.mem.eql(u8, key, "output")) p.output_format = try self.arena_allocator.dupe(u8, val);
-                        if (std.mem.eql(u8, key, "timestamp")) p.timestamp_key = try self.arena_allocator.dupe(u8, val);
-                        if (std.mem.eql(u8, key, "level")) p.level_key = try self.arena_allocator.dupe(u8, val);
-                        if (std.mem.eql(u8, key, "message")) p.message_key = try self.arena_allocator.dupe(u8, val);
-                        if (std.mem.eql(u8, key, "message_expand")) p.message_expand = try self.arena_allocator.dupe(u8, val);
-                        if (std.mem.eql(u8, key, "include")) p.include_filters = try parseFilterList(self.arena_allocator, val);
-                        if (std.mem.eql(u8, key, "exclude")) p.exclude_filters = try parseFilterList(self.arena_allocator, val);
+                        if (std.mem.eql(u8, key, "output")) p.output_format = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "timestamp")) p.timestamp_key = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "level")) p.level_key = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "message")) p.message_key = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "message_expand")) p.message_expand = try self.allocator.dupe(u8, val);
+                        if (std.mem.eql(u8, key, "include")) p.include_filters = try parseFilterList(self.allocator, val);
+                        if (std.mem.eql(u8, key, "exclude")) p.exclude_filters = try parseFilterList(self.allocator, val);
                     } else if (current_folder) |f| {
                         if (std.mem.eql(u8, key, "paths")) {
-                            var iter = std.mem.splitSequence(u8, val, ",");
-                            var path_list = std.array_list.AlignedManaged([]const u8, null).init(self.arena_allocator);
-                            while (iter.next()) |path_item| {
-                                try path_list.append(try self.arena_allocator.dupe(u8, std.mem.trim(u8, path_item, " ")));
+                            var piter = std.mem.splitSequence(u8, val, ",");
+                            var path_list = std.ArrayListUnmanaged([]const u8){};
+                            while (piter.next()) |path_item| {
+                                try path_list.append(self.allocator, try self.allocator.dupe(u8, std.mem.trim(u8, path_item, " ")));
                             }
-                            f.paths = try path_list.toOwnedSlice();
+                            f.paths = try path_list.toOwnedSlice(self.allocator);
                         } else if (std.mem.eql(u8, key, "timestamp")) {
-                            f.timestamp_key = try self.arena_allocator.dupe(u8, val);
+                            f.timestamp_key = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "level")) {
-                            f.level_key = try self.arena_allocator.dupe(u8, val);
+                            f.level_key = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "message")) {
-                            f.message_key = try self.arena_allocator.dupe(u8, val);
+                            f.message_key = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "message_expand")) {
-                            f.message_expand = try self.arena_allocator.dupe(u8, val);
+                            f.message_expand = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "output")) {
-                            f.output_format = try self.arena_allocator.dupe(u8, val);
+                            f.output_format = try self.allocator.dupe(u8, val);
                         } else if (std.mem.eql(u8, key, "include")) {
-                            f.include_filters = try parseFilterList(self.arena_allocator, val);
+                            f.include_filters = try parseFilterList(self.allocator, val);
                         } else if (std.mem.eql(u8, key, "exclude")) {
-                            f.exclude_filters = try parseFilterList(self.arena_allocator, val);
+                            f.exclude_filters = try parseFilterList(self.allocator, val);
                         }
                     } else {
                         // Top-level (not in any [folders] or [profile])
@@ -123,7 +130,7 @@ pub const Config = struct {
                                 continue;
                             };
                         } else if (std.mem.eql(u8, key, "www")) {
-                            self.www = try self.arena_allocator.dupe(u8, val);
+                            self.www = try self.allocator.dupe(u8, val);
                         }
                     }
                 }
@@ -133,15 +140,14 @@ pub const Config = struct {
 };
 
 /// Parse a comma-separated list of filter strings into an owned slice of duped strings.
-fn parseFilterList(arena_allocator: std.mem.Allocator, val: []const u8) ![][]const u8 {
-    var list = std.array_list.AlignedManaged([]const u8, null).init(arena_allocator);
-    errdefer list.deinit();
+fn parseFilterList(allocator: std.mem.Allocator, val: []const u8) ![][]const u8 {
+    var list = std.ArrayListUnmanaged([]const u8){};
     var iter = std.mem.splitSequence(u8, val, ",");
     while (iter.next()) |item| {
         const trimmed = std.mem.trim(u8, item, " \t");
         if (trimmed.len > 0) {
-            try list.append(try arena_allocator.dupe(u8, trimmed));
+            try list.append(allocator, try allocator.dupe(u8, trimmed));
         }
     }
-    return list.toOwnedSlice();
+    return list.toOwnedSlice(allocator);
 }

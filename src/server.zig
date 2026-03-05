@@ -11,9 +11,9 @@ const demo_client_js = web_assets.demo_js;
 pub const Server = struct {
     allocator: std.mem.Allocator,
     args: args_mod.Args,
-    config: config_mod.Config,
+    config: *const config_mod.Config,
 
-    pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: config_mod.Config) Server {
+    pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: *const config_mod.Config) Server {
         return .{
             .allocator = allocator,
             .args = args,

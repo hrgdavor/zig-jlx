@@ -53,6 +53,9 @@ pub const XevReader = struct {
     eof_reached: bool = false,
     io_pending: bool = false,
 
+    // Overflow/straddle buffer
+    side_buffer: std.ArrayListUnmanaged(u8),
+
     loop: xev.Loop,
     completion: xev.Completion,
 
@@ -61,11 +64,10 @@ pub const XevReader = struct {
     io_bytes_read: usize = 0,
     io_error: ?anyerror = null,
 
-    const PADDING: usize = 64;
-    const INITIAL_SIZE: usize = 1024 * 1024; // 1MB
+    const PADDING: usize = 16;
+    const BUF_SIZE: usize = 64 * 1024;
 
     pub const Options = struct {
-        initial_buffer_size: usize = INITIAL_SIZE,
         max_buffer_size: usize = 128 * 1024 * 1024,
     };
 
@@ -75,11 +77,9 @@ pub const XevReader = struct {
         const self = try allocator.create(XevReader);
         errdefer allocator.destroy(self);
 
-        const init_size = options.initial_buffer_size;
-
-        const buf0 = try allocator.alloc(u8, init_size + PADDING);
+        const buf0 = try allocator.alloc(u8, BUF_SIZE + PADDING);
         errdefer allocator.free(buf0);
-        const buf1 = try allocator.alloc(u8, init_size + PADDING);
+        const buf1 = try allocator.alloc(u8, BUF_SIZE + PADDING);
         errdefer allocator.free(buf1);
 
         self.* = XevReader{
@@ -87,6 +87,7 @@ pub const XevReader = struct {
             .file = file,
             .buffers = .{ buf0, buf1 },
             .active_idx = 0,
+            .side_buffer = .{},
             .max_buffer_size = options.max_buffer_size,
             .loop = if (builtin.os.tag != .linux) try xev.Loop.init(.{}) else undefined,
             .completion = undefined,
@@ -94,7 +95,7 @@ pub const XevReader = struct {
         };
 
         // Initiate the first read synchronously to jumpstart the pipeline
-        self.valid_len = try self.file.read(self.buffers[0][0..init_size]);
+        self.valid_len = try self.file.read(self.buffers[0][0..BUF_SIZE]);
         if (self.valid_len == 0) self.eof_reached = true;
 
         if (!self.eof_reached) {
@@ -102,15 +103,6 @@ pub const XevReader = struct {
         }
 
         return self;
-    }
-
-    pub fn deinit(self: *XevReader) void {
-        if (builtin.os.tag != .linux) {
-            self.loop.deinit();
-        }
-        self.allocator.free(self.buffers[0]);
-        self.allocator.free(self.buffers[1]);
-        self.allocator.destroy(self);
     }
 
     fn readCallback(
@@ -182,72 +174,60 @@ pub const XevReader = struct {
             const buf = self.buffers[self.active_idx];
             const data = buf[self.read_pos..self.valid_len];
 
+            // 1. Look for the next newline in the current valid data
             if (std.mem.indexOfScalar(u8, data, '\n')) |nl_idx| {
-                var line = data[0..nl_idx];
+                const fragment = data[0..nl_idx];
                 self.read_pos += nl_idx + 1;
 
-                if (line.len > 0 and line[line.len - 1] == '\r') {
-                    line = line[0 .. line.len - 1];
-                }
-                return line;
-            }
-
-            if (self.eof_reached) {
-                if (data.len > 0) {
-                    self.read_pos = self.valid_len;
-                    var line = data;
+                if (self.side_buffer.items.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    var line = self.side_buffer.items;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    const result = line;
+                    self.side_buffer.clearRetainingCapacity();
+                    return result;
+                } else {
+                    var line = fragment;
                     if (line.len > 0 and line[line.len - 1] == '\r') {
                         line = line[0 .. line.len - 1];
                     }
                     return line;
                 }
+            }
+
+            // 2. No newline in current buffer. If EOF is reached, yield whatever is remaining in side_buffer + data
+            if (self.eof_reached) {
+                if (self.side_buffer.items.len > 0 or data.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, data);
+                    self.read_pos = self.valid_len;
+                    var line = self.side_buffer.items;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    const result = line;
+                    self.side_buffer.clearRetainingCapacity();
+                    return result;
+                }
                 return null;
             }
 
+            // 3. Append the unconsumed "straddle" part to side_buffer
+            try self.side_buffer.appendSlice(self.allocator, data);
+            if (self.side_buffer.items.len > self.max_buffer_size) return error.MaxBufferSizeReached;
+
+            // 4. Wait for the background I/O to finish
             const new_bytes = try self.waitForIO();
 
-            const frag_len = self.valid_len - self.read_pos;
-            const next_idx = ~self.active_idx;
-
-            if (frag_len > 0) {
-                std.mem.copyForwards(u8, self.buffers[next_idx][0..frag_len], buf[self.read_pos..self.valid_len]);
-            }
-
-            const new_valid_len = frag_len + new_bytes;
-
-            if (new_valid_len >= self.buffers[next_idx].len - PADDING) {
-                const new_cap = self.buffers[0].len * 2;
-                if (new_cap > self.max_buffer_size) {
-                    return error.MaxBufferSizeReached; // Hard cap
-                }
-
-                self.buffers[0] = try self.allocator.realloc(self.buffers[0], new_cap);
-                self.buffers[1] = try self.allocator.realloc(self.buffers[1], new_cap);
-
-                const extra_read = try self.file.read(self.buffers[next_idx][new_valid_len .. self.buffers[next_idx].len - PADDING]);
-                self.valid_len = new_valid_len + extra_read;
-                if (extra_read == 0) self.eof_reached = true;
-            } else {
-                self.valid_len = new_valid_len;
-            }
-
-            self.active_idx = next_idx;
+            // Swap buffers: the background buffer becomes active
+            self.active_idx = ~self.active_idx;
+            self.valid_len = new_bytes;
             self.read_pos = 0;
 
+            // 5. Start a new async read for the buffer that just became free
             if (!self.eof_reached) {
-                const last_nl = fast_reader.findLastNewlineAVX2(self.buffers[self.active_idx][0..self.valid_len]);
-                var carry_offset: usize = 0;
-                if (last_nl) |idx| {
-                    carry_offset = self.valid_len - (idx + 1);
-                    std.mem.copyForwards(u8, self.buffers[~self.active_idx][0..carry_offset], self.buffers[self.active_idx][idx + 1 .. self.valid_len]);
-                    self.valid_len = idx + 1;
-                } else {
-                    carry_offset = self.valid_len;
-                    std.mem.copyForwards(u8, self.buffers[~self.active_idx][0..carry_offset], self.buffers[self.active_idx][0..self.valid_len]);
-                    self.valid_len = 0;
-                }
-
-                try self.startAsyncRead(~self.active_idx, carry_offset);
+                try self.startAsyncRead(~self.active_idx, 0);
             }
         }
     }
@@ -270,5 +250,15 @@ pub const XevReader = struct {
     fn deinitErased(ptr: *anyopaque) void {
         const self: *XevReader = @ptrCast(@alignCast(ptr));
         self.deinit();
+    }
+
+    pub fn deinit(self: *XevReader) void {
+        if (builtin.os.tag != .linux) {
+            self.loop.deinit();
+        }
+        self.allocator.free(self.buffers[0]);
+        self.allocator.free(self.buffers[1]);
+        self.side_buffer.deinit(self.allocator);
+        self.allocator.destroy(self);
     }
 };

@@ -48,6 +48,8 @@ pub const Processor = struct {
     seen_values: std.StringHashMap(void),
     /// Unique keys found during --keys run
     all_found_keys: std.StringHashMap(void),
+    /// Persistent buffer for lines that straddle I/O boundaries or exceed 64KB.
+    side_buffer: std.ArrayListUnmanaged(u8),
 
     pub fn init(allocator: std.mem.Allocator, args: args_mod.Args, config: *const config_mod.Config) Processor {
         return .{
@@ -56,6 +58,7 @@ pub const Processor = struct {
             .config = config,
             .seen_values = std.StringHashMap(void).init(allocator),
             .all_found_keys = std.StringHashMap(void).init(allocator),
+            .side_buffer = .{},
         };
     }
 
@@ -66,6 +69,7 @@ pub const Processor = struct {
             self.allocator.free(k.*);
         }
         self.all_found_keys.deinit();
+        self.side_buffer.deinit(self.allocator);
     }
 
     pub fn run(self: *Processor) !void {
@@ -294,101 +298,80 @@ pub const Processor = struct {
     }
 
     pub fn processStream(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext, limit: ?usize) !void {
-        var buf = try self.allocator.alloc(u8, 1024 * 1024);
+        var buf = try self.allocator.alloc(u8, 64 * 1024);
         defer self.allocator.free(buf);
 
         var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
         defer arena_instance.deinit();
         const arena = arena_instance.allocator();
 
-        var read_pos: usize = 0;
-        var write_pos: usize = 0;
-        var eof = false;
         var matched_count: usize = 0;
+        var eof = false;
 
         while (true) {
             if (limit) |l| if (matched_count >= l) break;
 
-            while (std.mem.indexOfScalarPos(u8, buf[0..write_pos], read_pos, '\n')) |nl_offset| {
+            const n = try file.read(buf);
+            if (n == 0) {
+                eof = true;
+            }
+
+            var read_pos: usize = 0;
+            const data = buf[0..n];
+
+            while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
                 if (limit) |l| if (matched_count >= l) break;
 
+                const fragment = data[read_pos..nl_idx];
+                read_pos = nl_idx + 1;
+
                 _ = arena_instance.reset(.retain_capacity);
-                var line = buf[read_pos..nl_offset];
-                if (line.len > 0 and line[line.len - 1] == '\r') {
-                    line = line[0 .. line.len - 1];
+
+                if (self.side_buffer.items.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    var line = self.side_buffer.items;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    if (try self.processLine(arena, line, writer, ctx)) {
+                        matched_count += 1;
+                    }
+                    self.side_buffer.clearRetainingCapacity();
+                } else {
+                    var line = fragment;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    if (try self.processLine(arena, line, writer, ctx)) {
+                        matched_count += 1;
+                    }
                 }
-                if (try self.processLine(arena, line, writer, ctx)) {
-                    matched_count += 1;
-                }
-                read_pos = nl_offset + 1;
             }
-            if (limit) |l| if (matched_count >= l) break;
 
             if (eof) {
-                if (read_pos < write_pos) {
-                    if (limit == null or matched_count < limit.?) {
-                        _ = arena_instance.reset(.retain_capacity);
-                        var line = buf[read_pos..write_pos];
-                        if (line.len > 0 and line[line.len - 1] == '\r') {
-                            line = line[0 .. line.len - 1];
-                        }
-                        if (try self.processLine(arena, line, writer, ctx)) {
-                            matched_count += 1;
-                        }
+                const fragment = data[read_pos..];
+                if (self.side_buffer.items.len > 0 or fragment.len > 0) {
+                    _ = arena_instance.reset(.retain_capacity);
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    var line = self.side_buffer.items;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
                     }
+                    if (try self.processLine(arena, line, writer, ctx)) {
+                        matched_count += 1;
+                    }
+                    self.side_buffer.clearRetainingCapacity();
                 }
                 break;
             }
 
-            const unread_len = write_pos - read_pos;
-            if (read_pos > 0 and unread_len > 0) {
-                std.mem.copyForwards(u8, buf[0..unread_len], buf[read_pos..write_pos]);
-                read_pos = 0;
-                write_pos = unread_len;
-            } else if (read_pos > 0) {
-                read_pos = 0;
-                write_pos = 0;
-            }
+            // Straddle: append remaining to side_buffer
+            const straddle = data[read_pos..];
+            try self.side_buffer.appendSlice(self.allocator, straddle);
 
-            if (write_pos == buf.len) {
-                const max_buf_size = 16 * 1024 * 1024;
-                if (buf.len >= max_buf_size) {
-                    if (self.args.verbose) {
-                        try writer.writeAll("[Error: Line exceeded maximum buffer size of 16MB. Skipping...]\n");
-                    }
-
-                    var skipped = false;
-                    while (true) {
-                        const n = try file.read(buf[0..buf.len]);
-                        if (n == 0) {
-                            eof = true;
-                            break;
-                        }
-                        if (std.mem.indexOfScalar(u8, buf[0..n], '\n')) |nl_idx| {
-                            const remaining = n - (nl_idx + 1);
-                            if (remaining > 0) {
-                                std.mem.copyForwards(u8, buf[0..remaining], buf[nl_idx + 1 .. n]);
-                            }
-                            read_pos = 0;
-                            write_pos = remaining;
-                            skipped = true;
-                            break;
-                        }
-                    }
-                    if (eof and !skipped) break;
-                    continue;
-                }
-
-                var new_cap = buf.len * 2;
-                if (new_cap > max_buf_size) new_cap = max_buf_size;
-                buf = try self.allocator.realloc(buf, new_cap);
-            }
-
-            const n = try file.read(buf[write_pos..]);
-            if (n == 0) {
-                eof = true;
-            } else {
-                write_pos += n;
+            const max_side_buf = 16 * 1024 * 1024;
+            if (self.side_buffer.items.len > max_side_buf) {
+                return error.MaxBufferSizeReached;
             }
         }
     }
@@ -396,83 +379,59 @@ pub const Processor = struct {
     pub fn followFile(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext) !void {
         var pos = try file.getPos();
 
-        var buf = try self.allocator.alloc(u8, 1024 * 1024);
+        var buf = try self.allocator.alloc(u8, 64 * 1024);
         defer self.allocator.free(buf);
 
         var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
         defer arena_instance.deinit();
         const arena = arena_instance.allocator();
 
-        var read_pos: usize = 0;
-        var write_pos: usize = 0;
-
         while (true) {
-            while (std.mem.indexOfScalarPos(u8, buf[0..write_pos], read_pos, '\n')) |nl_offset| {
-                _ = arena_instance.reset(.retain_capacity);
-                var line = buf[read_pos..nl_offset];
-                if (line.len > 0 and line[line.len - 1] == '\r') {
-                    line = line[0 .. line.len - 1];
-                }
-                _ = try self.processLine(arena, line, writer, ctx);
-                read_pos = nl_offset + 1;
-            }
-
-            // Flush after each batch of lines for live-view responsiveness
-            if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
-                try writer.flush();
-            }
-
-            const unread_len = write_pos - read_pos;
-            if (read_pos > 0 and unread_len > 0) {
-                std.mem.copyForwards(u8, buf[0..unread_len], buf[read_pos..write_pos]);
-                read_pos = 0;
-                write_pos = unread_len;
-            } else if (read_pos > 0) {
-                read_pos = 0;
-                write_pos = 0;
-            }
-
-            if (write_pos == buf.len) {
-                const max_buf_size = 16 * 1024 * 1024;
-                if (buf.len >= max_buf_size) {
-                    if (self.args.verbose) {
-                        try writer.writeAll("[Error: Line exceeded maximum buffer size of 16MB. Skipping...]\n");
-                    }
-
-                    var skipped = false;
-                    while (!skipped) {
-                        const n = try file.read(buf[0..buf.len]);
-                        if (n == 0) {
-                            std.Thread.sleep(100 * std.time.ns_per_ms);
-                            pos = file.getPos() catch pos;
-                            continue;
-                        }
-                        pos += n;
-                        if (std.mem.indexOfScalar(u8, buf[0..n], '\n')) |nl_idx| {
-                            const remaining = n - (nl_idx + 1);
-                            if (remaining > 0) {
-                                std.mem.copyForwards(u8, buf[0..remaining], buf[nl_idx + 1 .. n]);
-                            }
-                            read_pos = 0;
-                            write_pos = remaining;
-                            skipped = true;
-                        }
-                    }
-                    continue;
-                }
-
-                var new_cap = buf.len * 2;
-                if (new_cap > max_buf_size) new_cap = max_buf_size;
-                buf = try self.allocator.realloc(buf, new_cap);
-            }
-
-            const n = try file.read(buf[write_pos..]);
+            const n = try file.read(buf);
             if (n == 0) {
+                // Flush before sleeping to show progress
+                if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
+                    try writer.flush();
+                }
                 std.Thread.sleep(100 * std.time.ns_per_ms);
                 pos = file.getPos() catch pos;
-            } else {
-                write_pos += n;
-                pos += n;
+                continue;
+            }
+            pos += n;
+
+            var read_pos: usize = 0;
+            const data = buf[0..n];
+
+            while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
+                const fragment = data[read_pos..nl_idx];
+                read_pos = nl_idx + 1;
+
+                _ = arena_instance.reset(.retain_capacity);
+
+                if (self.side_buffer.items.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    var line = self.side_buffer.items;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    _ = try self.processLine(arena, line, writer, ctx);
+                    self.side_buffer.clearRetainingCapacity();
+                } else {
+                    var line = fragment;
+                    if (line.len > 0 and line[line.len - 1] == '\r') {
+                        line = line[0 .. line.len - 1];
+                    }
+                    _ = try self.processLine(arena, line, writer, ctx);
+                }
+            }
+
+            // Straddle: append remaining to side_buffer
+            const straddle = data[read_pos..];
+            try self.side_buffer.appendSlice(self.allocator, straddle);
+
+            const max_side_buf = 16 * 1024 * 1024;
+            if (self.side_buffer.items.len > max_side_buf) {
+                return error.MaxBufferSizeReached;
             }
         }
     }
@@ -1072,4 +1031,57 @@ test "Processor.processLine with shared samples" {
             }
         }
     }
+}
+
+test "Processor straddle and overflow" {
+    const allocator = std.testing.allocator;
+
+    const test_dir = std.testing.tmpDir(.{});
+    var tmp_dir = test_dir;
+    defer tmp_dir.cleanup();
+
+    // 1. Create a 150KB "line" (no newlines until end)
+    const large_line = try allocator.alloc(u8, 150 * 1024);
+    defer allocator.free(large_line);
+    @memset(large_line, 'A');
+    // Make it valid JSON at the beginning and end
+    large_line[0] = '{';
+    large_line[1] = '"';
+    large_line[2] = 'a';
+    large_line[3] = '"';
+    large_line[4] = ':';
+    large_line[5] = '"';
+    large_line[large_line.len - 2] = '"';
+    large_line[large_line.len - 1] = '}';
+
+    var file = try tmp_dir.dir.createFile("large.txt", .{ .read = true });
+    try file.writeAll("{\"msg\":\"short\"}\n");
+    try file.writeAll(large_line);
+    try file.writeAll("\n{\"msg\":\"end\"}");
+    file.close();
+
+    file = try tmp_dir.dir.openFile("large.txt", .{ .mode = .read_only });
+    defer file.close();
+
+    var args = @import("args.zig").Args{};
+    args.passthrough = true;
+    var config = @import("config.zig").Config.init(allocator);
+    defer config.deinit();
+    try config.folders.append(allocator, .{
+        .paths = &[_][]const u8{},
+        .profiles = std.StringHashMap(@import("config.zig").Profile).init(allocator),
+    });
+
+    var processor = Processor.init(allocator, args, &config);
+    defer processor.deinit();
+
+    var out_buf = std.ArrayListUnmanaged(u8){};
+    defer out_buf.deinit(allocator);
+
+    var ctx = try processor.buildContext();
+    defer ctx.deinit(allocator);
+
+    try processor.processStream(file, out_buf.writer(allocator), &ctx, null);
+
+    try std.testing.expect(out_buf.items.len > 150 * 1024);
 }

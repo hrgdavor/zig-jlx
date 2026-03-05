@@ -11,7 +11,7 @@ You can practice using `jlx` and see live formatting in the interactive demo:
     2. Build the artifacts: `bun run build-demo`
     2. Run a local server to enable `fetch` features:
        ```bash
-       bun x serve ../docs
+       bun x serve site
        ```
     3. Open the provided `localhost` URL in your browser.
 
@@ -20,7 +20,7 @@ You can practice using `jlx` and see live formatting in the interactive demo:
 The demo is now a standalone HTML file with all JS logic inlined, suitable for GitHub Pages.
 
 ```bash
-# Build the standalone demo (generates ../docs/index.html)
+# Build the standalone demo (generates site/index.html)
 bun run build-demo
 ```
 
@@ -42,7 +42,7 @@ Generate large, realistic test logs with sessions, ticket IDs, and randomized me
 
 ```bash
 # Generate 10,000 lines of session-based ticket logs
-bun ../scripts/generate-log.js 10000 > test.log
+bun scripts/generate-log.js 10000 > test.log
 ```
 
 The generator creates logs for a single day (`2026-03-04`) with fields like `sessionId`, `ticketId`, and `userId`, perfect for practicing complex filters in the demo workbench.

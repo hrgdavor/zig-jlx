@@ -47,7 +47,11 @@ pub const Config = struct {
     }
 
     pub fn load(self: *Config, path: []const u8) !void {
-        const file = try std.fs.cwd().openFile(path, .{});
+        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
+            std.debug.print("Critical error: could not open {s} ({})", .{ path, err });
+            std.process.exit(1);
+        };
+
         defer file.close();
 
         var read_buf: [4096]u8 = undefined;

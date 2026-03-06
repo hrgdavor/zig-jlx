@@ -65,7 +65,7 @@ pub const XevReader = struct {
     io_error: ?anyerror = null,
 
     const PADDING: usize = 16;
-    const BUF_SIZE: usize = 64 * 1024;
+    const BUF_SIZE: usize = 32 * 1024;
 
     pub const Options = struct {
         max_buffer_size: usize = 128 * 1024 * 1024,

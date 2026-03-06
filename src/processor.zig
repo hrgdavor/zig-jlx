@@ -307,7 +307,7 @@ pub const Processor = struct {
     }
 
     pub fn processStream(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext, limit: ?usize) !void {
-        var buf = try self.allocator.alloc(u8, 64 * 1024);
+        var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
         var arena_instance = std.heap.ArenaAllocator.init(self.allocator);
@@ -388,7 +388,7 @@ pub const Processor = struct {
     pub fn followFile(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext) !void {
         var pos = try file.getPos();
 
-        var buf = try self.allocator.alloc(u8, 64 * 1024);
+        var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
         var arena_instance = std.heap.ArenaAllocator.init(self.allocator);

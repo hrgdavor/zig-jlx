@@ -24,7 +24,7 @@ pub const IoUringReader = struct {
     io_pending: bool = false,
 
     const PADDING: usize = 16;
-    const BUF_SIZE: usize = 64 * 1024;
+    const BUF_SIZE: usize = 32 * 1024;
 
     pub const Options = struct {
         max_buffer_size: usize = 128 * 1024 * 1024, // Hard cap of 128MB

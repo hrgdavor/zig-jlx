@@ -89,7 +89,7 @@ pub fn findLastLinesOffset(file: std.fs.File, n_lines: usize) !u64 {
     // 1st from back is index 1.
     // So we need to be careful. Let's just count N newlines.
 
-    const chunk_size = 64 * 1024;
+    const chunk_size = 32 * 1024;
     var buf: [chunk_size]u8 = undefined;
 
     var pos = total_size;

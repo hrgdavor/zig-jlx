@@ -75,15 +75,15 @@ Most modern filesystems (EXT4, XFS, NTFS) and SSDs (Advanced Format) use **4KB b
 Memory is managed in **4KB pages**. Using `std.heap.page_size_min` (typically 4KB) for alignment is critical when using `io_uring` with `O_DIRECT`. Without page alignment, `O_DIRECT` may fail or fall back to slower buffered I/O.
 
 ### 3. CPU Cache Locality
-- **L1/L2 Cache (32KB - 512KB)**: If your buffer fits in L2, SIMD instructions like `indexOfScalarPos` will be lightning fast because the data stays close to the execution units.
+- **L1/L2 Cache (32KB - 512KB)**: If your buffer fits in the L1 data cache, SIMD instructions like `indexOfScalarPos` will be lightning fast because the data stays close to the execution units.
 - **L3 Cache (8MB - 64MB)**: Once your buffer exceeds ~1MB, you start "thrashing" the higher-speed caches. 
-- **The Sweet Spot**: For high-performance log processing, **64KB or 128KB** is often the ideal balance. It is large enough to saturate the disk controller but small enough to fit comfortably in the CPU's cache during the SIMD search phase.
+- **The Sweet Spot**: For high-performance log processing, **32KB** is often the ideal balance. It is small enough to fit within most modern L1 data caches while still being large enough to saturate the disk controller.
 
 ### 4. Throughput vs Latency
 - **Small (4KB - 16KB)**: Lower latency, but high syscall overhead (if not using `io_uring`).
 - **Large (1MB - 16MB)**: Maximum throughput for NVMe drives, but higher memory usage and cache misses.
 
-**Recommendation for `jlx`**: Use **64KB** or **128KB** buffers. They align with filesystem blocks, fit in CPU L2/L3 caches, and provide enough data for SIMD instructions to operate efficiently.
+**Recommendation for `jlx`**: Use **32KB** buffers. They align with filesystem blocks, fit in CPU L1/L2 caches, and provide enough data for SIMD instructions to operate efficiently.
 
 ---
 
@@ -102,7 +102,7 @@ If your buffer is **8MB** but your CPU's L2 cache is only **1MB**, the hardware 
 ### 3. Conclusion for Large Buffers
 Even if your lines are short and you only search the first 50 bytes, a massive buffer size forces the hardware to manage more state and increases the risk that the data you are about to process is evicted before you touch it. 
 
-**Small, aligned buffers (64KB-256KB)** ensure that the "fresh" data provided by `io_uring` is still sitting in the fastest possible cache when the CPU starts its SIMD delimiter search.
+**Small, aligned buffers (32KB-128KB)** ensure that the "fresh" data provided by `io_uring` is still sitting in the fastest possible cache when the CPU starts its SIMD delimiter search.
 
 ---
 
@@ -115,30 +115,33 @@ Modern CPUs (Intel Alder Lake, AMD Zen 4) typically have **1MB to 2MB of L2 cach
 - **Goal**: Keep both buffers (the one you are processing and the one being filled) entirely within the L2 cache.
 - **Why**: As the CPU scans Buffer A, it will also occasionally "peek" at metadata or prepare Buffer B. If the combined size exceeds L2, the CPU is forced to use the shared (and slower) L3 cache.
 
-### Recommended Initial Size: 64KB
-A **64KB** buffer size is used in our implementation:
-1. **Total Footprint**: 128KB (2 x 64KB for double buffering).
-2. **Cache Fit**: Fits comfortably in almost any modern L2 cache (usually 256KB+), ensuring the CPU searches data at peak speed.
-3. **Efficiency**: 64KB is large enough to saturate high-speed SSDs while maintaining high "hit" rates in private caches.
+### Recommended Initial Size: 32KB
+A **32KB** buffer size is used in our implementation:
+1. **Total Footprint**: 64KB (2 x 32KB for double buffering).
+2. **Cache Fit**: Fits comfortably in almost any modern L1 cache (usually 32KB-64KB) and certainly L2, ensuring the CPU searches data at peak speed with minimal eviction of other critical processing data (JSON keys, timestamp state).
+3. **Efficiency**: 32KB is large enough to saturate high-speed SSDs while maintaining high "hit" rates in private caches.
+
+### Why 32KB over 64KB?
+Modern CPUs typically have 32KB or 64KB L1 Data caches. Using a 32KB buffer leaves "breathing room" in a 64KB L1 cache for the stack, local variables, and the internal state of the JSON parser. If the buffer itself is 64KB, it is guaranteed to push other hot data into the slower L2 cache, causing "cache churn" during the compute-heavy formatting phase.
 
 ---
 
-## The Hybrid Strategy: 64KB Static + On-Demand Side Buffer
+## The Hybrid Strategy: 32KB Static + On-Demand Side Buffer
 
 To balance high-performance I/O and support for arbitrarily long lines, we use a hybrid buffering model across all readers and the core engine:
 
-### 1. Primary I/O Buffers (Static 64KB)
-- **Size**: Exactly 64KB.
+### 1. Primary I/O Buffers (Static 32KB)
+- **Size**: Exactly 32KB.
 - **Goal**: Fit entirely within the L2 cache per core.
 - **Behavior**: These buffers are never resized or moved. This ensures that the high-speed SIMD scanning always happens on cache-resident data.
 
 ### 2. The Side Buffer (On-Demand `ArrayListUnmanaged`)
-When a line is too long to fit in the current 64KB buffer, or when it spans ("straddles") across two buffers:
+When a line is too long to fit in the current 32KB buffer, or when it spans ("straddles") across two buffers:
 - **Storage**: We copy the unconsumed fragment into a persistent `side_buffer`.
 - **Growth**: The `side_buffer` grows dynamically as needed to accommodate full lines up to a configurable limit (default 128MB).
 - **Lifecycle**: It is cleared(length reset) after each line is processed but retains its memory capacity to avoid repeated allocations during a single run.
 
 ### 3. Key Benefits
 - **Optimized Cache Locality**: The hot processing loop always works on fresh data directly from the disk-filled static buffers.
-- **Zero-Copy for Common Cases**: Most log lines fit within 64KB and are processed directly without any additional copies.
+- **Zero-Copy for Common Cases**: Most log lines fit within 32KB and are processed directly without any additional copies.
 - **Graceful Degradation**: Extremely long lines are handled safely via the `side_buffer`, preventing costly reallocations of the primary I/O buffers.

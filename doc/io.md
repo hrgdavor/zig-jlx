@@ -32,7 +32,7 @@ Uses two distinct buffers (A and B). While the CPU processes Buffer A, the hardw
 | **Latency**        | Higher (Wait-Process-Wait) | Lower (Continuous throughput)  |
 | **Throughput**     | Good                       | Excellent                      |
 | **Implementation** | ~50 lines of code          | ~200+ lines of code            |
-| **Memory Usage**   | 1x Buffer Size            | 2x Buffer Size                |
+| **Memory Usage**   | 1x Buffer Size             | 2x Buffer Size                 |
 
 ## Recommendation
 

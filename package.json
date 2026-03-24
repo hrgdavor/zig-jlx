@@ -10,9 +10,14 @@
     "clean": "bun -e \"import { rmSync } from 'fs'; try { rmSync('dist', { recursive: true, force: true }); } catch (e) {}\""
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "playwright": "^1.58.2"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@jsx6/jsx6": "^1.8.18",
+    "@jsx6/signal": "^1.8.18"
   }
 }

@@ -15,16 +15,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-linux-musl
-            archive: gtlogj-linux-x86_64.tar.gz
+            archive: jlx-linux-x86_64.tar.gz
           - os: windows-latest
             target: x86_64-windows
-            archive: gtlogj-windows-x86_64.zip
+            archive: jlx-windows-x86_64.zip
           - os: macos-latest
             target: x86_64-macos
-            archive: gtlogj-macos-x86_64.tar.gz
+            archive: jlx-macos-x86_64.tar.gz
           - os: macos-latest
             target: aarch64-macos
-            archive: gtlogj-macos-aarch64.tar.gz
+            archive: jlx-macos-aarch64.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -41,12 +41,12 @@ jobs:
       - name: Package (Unix — tar.gz)
         if: runner.os != 'Windows'
         run: |
-          tar -czf ${{ matrix.archive }} -C zig-out/bin gtlogj
+          tar -czf ${{ matrix.archive }} -C zig-out/bin jlx
 
       - name: Package (Windows — zip)
         if: runner.os == 'Windows'
         run: |
-          Compress-Archive -Path zig-out\bin\gtlogj.exe -DestinationPath ${{ matrix.archive }}
+          Compress-Archive -Path zig-out\bin\jlx.exe -DestinationPath ${{ matrix.archive }}
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2

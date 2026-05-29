@@ -46,7 +46,7 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    if (args.config == null and !args.keys) {
+    if (args.config == null and !args.keys and !args.strip) {
         var stderr_buffer: [4096]u8 = undefined;
         var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
         const stderr = &stderr_writer.interface;

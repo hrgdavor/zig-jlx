@@ -20,6 +20,8 @@ pub const Args = struct {
     values: ?[]const u8 = null,
     /// Collect and list all unique keys found in JSON lines
     keys: bool = false,
+    /// Standalone mode: print each line starting from first '{'
+    strip: bool = false,
     verbose: bool = false,
     help: bool = false,
 
@@ -41,6 +43,7 @@ pub const Args = struct {
         zone: ?[]const u8 = null,
         values: ?[]const u8 = null,
         keys: bool = false,
+        strip: bool = false,
         verbose: bool = false,
         help: bool = false,
 
@@ -79,6 +82,7 @@ pub const Args = struct {
             .zone = "Timezone offset for range and datetime display",
             .values = "Collect unique values for a key ([prefix:]key)",
             .keys = "Collect and list all unique keys (standalone)",
+            .strip = "Standalone: strip leading text before first '{'",
             .verbose = "Print errors when output formatting fails",
             .help = "Print this help message and exit",
             .serve = "Start a web server for interactive log analysis",

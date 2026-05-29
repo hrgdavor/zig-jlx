@@ -37,6 +37,7 @@ jlx -c <config> [options] [file]
 | `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
 | `-v <spec>` | `--values`      | Collect unique values for a key (prefix:key)         |
 |             | `--keys`        | Collect and list all unique JSON keys discovered     |
+|             | `--strip`       | Standalone: strip leading text before first `{`      |
 | `-s`        | `--serve`       | Start a web server for interactive log analysis      |
 |             | `--port <num>`  | Port to listen on (default 3000)                      |
 | `-w <path>` | `--www`         | Path to serve static files from (default: internal)  |
@@ -395,6 +396,12 @@ jlx --keys app.log
 
 # Also works with piped input
 cat app.log | jlx --keys
+
+# Strip non-JSON prefixes from mixed log lines (no config required)
+jlx --strip app.log
+
+# Also works with piped input
+cat app.log | jlx --strip
 ```
 
 ---
@@ -429,7 +436,7 @@ jlx -c test.conf test.log -i "User login" -v datetime:user_id
 jlx -c myapp.conf app.log
 
 # Command-line configuration requirement
-# The -c/--config flag is REQUIRED for all operations EXCEPT --keys.
+# The -c/--config flag is REQUIRED for all operations EXCEPT --keys and --strip.
 
 # ISO timestamp using a profile
 jlx -c myapp.conf -p timed app.log

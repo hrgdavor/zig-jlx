@@ -113,6 +113,11 @@ pub const Processor = struct {
     }
 
     pub fn runInternal(self: *Processor, writer: anytype) !void {
+        if (self.args.strip) {
+            try self.runStripPrefix(writer);
+            return;
+        }
+
         // Resolve config, keys, and filters once — before any line is processed.
         var ctx = try self.buildContext();
         defer ctx.deinit(self.allocator);
@@ -152,6 +157,121 @@ pub const Processor = struct {
 
         if (self.args.keys) {
             try self.reportDiscoveredKeys(writer);
+        }
+    }
+
+    fn runStripPrefix(self: *Processor, writer: anytype) !void {
+        if (self.args.file_path) |path| {
+            const file = try std.fs.cwd().openFile(path, .{});
+            defer file.close();
+
+            if (self.args.follow) {
+                try self.followStripPrefixFile(file, writer);
+            } else {
+                try self.processStripPrefixStream(file, writer);
+            }
+        } else {
+            try self.processStripPrefixStream(std.fs.File.stdin(), writer);
+        }
+    }
+
+    fn writeStripPrefixLine(self: *Processor, line_in: []const u8, writer: anytype) !void {
+        _ = self;
+        var line = line_in;
+        if (line.len > 0 and line[line.len - 1] == '\r') {
+            line = line[0 .. line.len - 1];
+        }
+        const json_start = std.mem.indexOfScalar(u8, line, '{') orelse return;
+        try writer.writeAll(line[json_start..]);
+        try writer.writeAll("\n");
+    }
+
+    fn processStripPrefixStream(self: *Processor, file: std.fs.File, writer: anytype) !void {
+        var buf = try self.allocator.alloc(u8, 32 * 1024);
+        defer self.allocator.free(buf);
+
+        while (true) {
+            const n = try file.read(buf);
+            const eof = n == 0;
+            const data = buf[0..n];
+
+            var read_pos: usize = 0;
+            while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
+                const fragment = data[read_pos..nl_idx];
+                read_pos = nl_idx + 1;
+
+                if (self.side_buffer.items.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    try self.writeStripPrefixLine(self.side_buffer.items, writer);
+                    self.side_buffer.clearRetainingCapacity();
+                } else {
+                    try self.writeStripPrefixLine(fragment, writer);
+                }
+            }
+
+            const straddle = data[read_pos..];
+            if (straddle.len > 0) {
+                try self.side_buffer.appendSlice(self.allocator, straddle);
+            }
+
+            if (eof) {
+                if (self.side_buffer.items.len > 0) {
+                    try self.writeStripPrefixLine(self.side_buffer.items, writer);
+                    self.side_buffer.clearRetainingCapacity();
+                }
+                break;
+            }
+
+            const max_side_buf = 16 * 1024 * 1024;
+            if (self.side_buffer.items.len > max_side_buf) {
+                return error.MaxBufferSizeReached;
+            }
+        }
+    }
+
+    fn followStripPrefixFile(self: *Processor, file: std.fs.File, writer: anytype) !void {
+        var buf = try self.allocator.alloc(u8, 32 * 1024);
+        defer self.allocator.free(buf);
+
+        var pos = try file.getPos();
+
+        while (true) {
+            const n = try file.read(buf);
+            if (n == 0) {
+                if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
+                    try writer.flush();
+                }
+                std.Thread.sleep(100 * std.time.ns_per_ms);
+                pos = file.getPos() catch pos;
+                continue;
+            }
+            pos += n;
+
+            var read_pos: usize = 0;
+            const data = buf[0..n];
+
+            while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
+                const fragment = data[read_pos..nl_idx];
+                read_pos = nl_idx + 1;
+
+                if (self.side_buffer.items.len > 0) {
+                    try self.side_buffer.appendSlice(self.allocator, fragment);
+                    try self.writeStripPrefixLine(self.side_buffer.items, writer);
+                    self.side_buffer.clearRetainingCapacity();
+                } else {
+                    try self.writeStripPrefixLine(fragment, writer);
+                }
+            }
+
+            const straddle = data[read_pos..];
+            if (straddle.len > 0) {
+                try self.side_buffer.appendSlice(self.allocator, straddle);
+            }
+
+            const max_side_buf = 16 * 1024 * 1024;
+            if (self.side_buffer.items.len > max_side_buf) {
+                return error.MaxBufferSizeReached;
+            }
         }
     }
 
@@ -1136,4 +1256,45 @@ test "Processor straddle and overflow" {
     try processor.processStream(file, out_buf.writer(allocator), &ctx, null);
 
     try std.testing.expect(out_buf.items.len > 150 * 1024);
+}
+
+test "Processor strip mode removes leading prefix before first brace" {
+    const allocator = std.testing.allocator;
+
+    const test_dir = std.testing.tmpDir(.{});
+    var tmp_dir = test_dir;
+    defer tmp_dir.cleanup();
+
+    var file = try tmp_dir.dir.createFile("strip.txt", .{ .read = true });
+    try file.writeAll("INFO 2026-01-01 {\"k\":\"v\"}\n");
+    try file.writeAll("this line has no json\n");
+    try file.writeAll("DBG {\"n\":1}\r\n");
+    try file.writeAll("{\"raw\":true}\n");
+    file.close();
+
+    file = try tmp_dir.dir.openFile("strip.txt", .{ .mode = .read_only });
+    defer file.close();
+
+    var args = @import("args.zig").Args{};
+    args.strip = true;
+
+    var config = @import("config.zig").Config.init(allocator);
+    defer config.deinit();
+    try config.folders.append(allocator, .{
+        .paths = &[_][]const u8{},
+        .profiles = std.StringHashMap(@import("config.zig").Profile).init(allocator),
+    });
+
+    var processor = Processor.init(allocator, args, &config);
+    defer processor.deinit();
+
+    var out_buf = std.ArrayListUnmanaged(u8){};
+    defer out_buf.deinit(allocator);
+
+    try processor.processStripPrefixStream(file, out_buf.writer(allocator));
+
+    try std.testing.expectEqualStrings(
+        "{\"k\":\"v\"}\n{\"n\":1}\n{\"raw\":true}\n",
+        out_buf.items,
+    );
 }

@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "bun": true,
+        "/^cd d:\\\\wrk\\\\zig\\\\zig-jlx\\\\docs ; python -m http\\.server 8000$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

@@ -1,125 +1,116 @@
 /** @jsxImportSource @jsx6 */
 import { Config } from './config.js';
 import { Processor } from './processor.js';
-import { observeNow, signal } from '@jsx6/signal';
+import { signal } from '@jsx6/signal';
+import { JsxW, define } from '@jsx6/w';
 
-let configEditor, workflowSelect, configSampleSelect, workflowDescription, includeFilter, excludeFilter, rangeFilter;
-let output, cliCommand, matchStats, copyBtn, fileInput, autoScrollToggle, liveToggle, sseStatus;
+let ui = {};
+let configEditor, workflowSelect, configSampleSelect, includeFilter, excludeFilter, rangeFilter;
+let output, copyBtn, fileInput, autoScrollToggle, liveToggle;
 
-function renderShell() {
-    const app = document.getElementById('app');
-    const root = (
-        <div>
-            <header>
-                <div class="logo">jlx // interactive workbench</div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <input type="file" id="fileInput" style="display: none;" />
-                    <button class="btn-copy" id="loadLogBtn" onClick={() => document.getElementById('fileInput').click()} style="float: none; font-size: 0.75rem; padding: 0.4rem 0.8rem; border-color: var(--accent); color: var(--accent);">Load Log File</button>
-                    <button class="btn-copy" id="loadDemoBtn" onClick={() => tryAutoLoadSample()} style="float: none; font-size: 0.75rem; padding: 0.4rem 0.8rem; border-color: var(--accent); color: var(--accent);">Load demo log</button>
-                </div>
-            </header>
-            <main>
+const $workflowDescription = signal('');
+const $cliCommand = signal('jlx -c jlx.conf test.log');
+const $matchStats = signal('Showing all lines');
+const $sseText = signal('CONNECTED');
+const $sseStyle = signal('margin: 0; display: none; background: #22c55e;');
+
+class App extends JsxW {
+    constructor() {
+        super();
+    }
+
+    render(_, __, scope) {
+        ui = scope;
+        return (
+            <div>
+                <header>
+                    <div class="logo">jlx // interactive workbench</div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <input p="fileInput" type="file" id="fileInput" style="display: none;" />
+                        <button class="btn-copy" id="loadLogBtn" onClick={() => ui.fileInput.click()} style="float: none; font-size: 0.75rem; padding: 0.4rem 0.8rem; border-color: var(--accent); color: var(--accent);">Load Log File</button>
+                        <button class="btn-copy" id="loadDemoBtn" onClick={() => tryAutoLoadSample()} style="float: none; font-size: 0.75rem; padding: 0.4rem 0.8rem; border-color: var(--accent); color: var(--accent);">Load demo log</button>
+                    </div>
+                </header>
+                <main>
                 <div class="sidebar">
                     <div class="control-group">
                         <div class="section-title">Ready-Made Workflows</div>
-                        <select id="workflowSelect"><option value="">-- Select a Workflow --</option></select>
-                        <div id="workflowDescription" style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.3rem;"></div>
+                        <select p="workflowSelect" id="workflowSelect"><option value="">-- Select a Workflow --</option></select>
+                        <div p="workflowDescription" style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.3rem;">{$workflowDescription}</div>
                     </div>
                     <div class="control-group">
                         <div class="section-title">Configuration (jlx.conf)</div>
                         <label>Load Sample Config</label>
-                        <select id="configSampleSelect"><option value="">-- Choose a Sample --</option></select>
+                        <select p="configSampleSelect" id="configSampleSelect"><option value="">-- Choose a Sample --</option></select>
                         <label style="margin-top: 0.5rem;">Edit Configuration</label>
-                        <textarea id="configEditor" style="width: 100%; height: 180px; margin-top: 0.2rem; font-size: 0.75rem; line-height: 1.4; white-space: pre; border-color: rgba(247, 164, 29, 0.3);"></textarea>
+                        <textarea p="configEditor" id="configEditor" style="width: 100%; height: 180px; margin-top: 0.2rem; font-size: 0.75rem; line-height: 1.4; white-space: pre; border-color: rgba(247, 164, 29, 0.3);"></textarea>
                     </div>
                     <div class="control-group">
                         <div class="section-title">Current CLI State</div>
-                        <div class="cli-preview" id="cliCommand">jlx -c jlx.conf test.log</div>
-                        <button class="btn-copy" id="copyBtn">Copy Command</button>
+                        <div p="cliCommand" class="cli-preview" id="cliCommand">{$cliCommand}</div>
+                        <button p="copyBtn" class="btn-copy" id="copyBtn">Copy Command</button>
                     </div>
                     <div class="control-group">
                         <div class="section-title">Filters (Live Edit)</div>
                         <label>Include Only (-i)</label>
-                        <input type="text" id="includeFilter" placeholder="level:INFO or ~regex" />
+                        <input p="includeFilter" type="text" id="includeFilter" placeholder="level:INFO or ~regex" />
                         <label>Exclude (-e)</label>
-                        <input type="text" id="excludeFilter" placeholder="logger:db" />
+                        <input p="excludeFilter" type="text" id="excludeFilter" placeholder="logger:db" />
                         <label>Time Range (-r)</label>
-                        <input type="text" id="rangeFilter" placeholder="08:00..09:00" />
+                        <input p="rangeFilter" type="text" id="rangeFilter" placeholder="08:00..09:00" />
                     </div>
                     <div style="margin-top: auto; font-size: 0.65rem; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 1rem;">Tip: Use level:ERROR to find issues quickly, or -r 14:00..15:00 for afternoon analysis. All formatting is handled via -c jlx.conf.</div>
                 </div>
                 <div class="content">
                     <div class="section-title">
                         <span>Synthetic Log Feed (10,000 Entries Generated)</span>
-                        <span id="matchStats" style="margin-left: auto; color: var(--accent); font-size: 0.75rem;">Showing all lines</span>
+                        <span p="matchStats" id="matchStats" style="margin-left: auto; color: var(--accent); font-size: 0.75rem;">{$matchStats}</span>
                         <div style="margin-left: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;">
                             <label class="switch" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-                                <input type="checkbox" id="liveToggle" style="margin: 0;" />
+                                <input p="liveToggle" type="checkbox" id="liveToggle" style="margin: 0;" />
                                 <span style="color: var(--accent); font-weight: 600;">LIVE MODE</span>
                             </label>
                             <label class="switch" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin-left: 1rem;">
-                                <input type="checkbox" id="autoScrollToggle" style="margin: 0;" checked />
+                                <input p="autoScrollToggle" type="checkbox" id="autoScrollToggle" style="margin: 0;" checked />
                                 <span style="color: var(--accent); font-weight: 600;">AUTO SCROLL</span>
                             </label>
-                            <span id="sseStatus" class="pill" style="margin: 0; display: none; background: #22c55e;">CONNECTED</span>
+                            <span p="sseStatus" class="pill" id="sseStatus" style={$sseStyle}>{$sseText}</span>
                         </div>
                     </div>
-                    <div class="log-output" id="output"></div>
+                    <div p="output" class="log-output" id="output"></div>
                 </div>
             </main>
         </div>
     );
-    app.replaceChildren(root);
+}
+}
+
+function renderShell() {
+    const app = document.getElementById('app');
+    const component = define(App); 
+    app.replaceChildren(component());
 }
 
 function hookElements() {
-    configEditor = document.getElementById('configEditor');
-    workflowSelect = document.getElementById('workflowSelect');
-    configSampleSelect = document.getElementById('configSampleSelect');
-    workflowDescription = document.getElementById('workflowDescription');
-    includeFilter = document.getElementById('includeFilter');
-    excludeFilter = document.getElementById('excludeFilter');
-    rangeFilter = document.getElementById('rangeFilter');
-    output = document.getElementById('output');
-    cliCommand = document.getElementById('cliCommand');
-    matchStats = document.getElementById('matchStats');
-    copyBtn = document.getElementById('copyBtn');
-    fileInput = document.getElementById('fileInput');
-    autoScrollToggle = document.getElementById('autoScrollToggle');
-    liveToggle = document.getElementById('liveToggle');
-    sseStatus = document.getElementById('sseStatus');
+    const scope = ui || {};
+    workflowSelect = scope.workflowSelect || document.getElementById('workflowSelect');
+    configSampleSelect = scope.configSampleSelect || document.getElementById('configSampleSelect');
+    configEditor = scope.configEditor || document.getElementById('configEditor');
+    includeFilter = scope.includeFilter || document.getElementById('includeFilter');
+    excludeFilter = scope.excludeFilter || document.getElementById('excludeFilter');
+    rangeFilter = scope.rangeFilter || document.getElementById('rangeFilter');
+    output = scope.output || document.getElementById('output');
+    copyBtn = scope.copyBtn || document.getElementById('copyBtn');
+    fileInput = scope.fileInput || document.getElementById('fileInput');
+    autoScrollToggle = scope.autoScrollToggle || document.getElementById('autoScrollToggle');
+    liveToggle = scope.liveToggle || document.getElementById('liveToggle');
 }
 
 let loadedLogLines = [];
 
-const $workflowDescription = signal('');
-const $cliCommand = signal('jlx -c jlx.conf test.log');
-const $matchStats = signal('Showing all lines');
-const $sseUiState = signal({ text: 'CONNECTED', display: 'none', background: '#22c55e' });
-
-function bindReactiveUi() {
-    observeNow($workflowDescription, (value) => {
-        workflowDescription.textContent = value || '';
-    });
-
-    observeNow($cliCommand, (value) => {
-        cliCommand.textContent = value || '';
-    });
-
-    observeNow($matchStats, (value) => {
-        matchStats.textContent = value || '';
-    });
-
-    observeNow($sseUiState, (value) => {
-        const state = value || {};
-        sseStatus.textContent = state.text || '';
-        sseStatus.style.display = state.display || 'none';
-        sseStatus.style.background = state.background || '#22c55e';
-    });
-}
-
 function setSseUiState(text, display, background) {
-    $sseUiState({ text, display, background });
+    $sseText(text);
+    $sseStyle(`margin: 0; display: ${display}; background: ${background};`);
 }
 
 // Render static shell using JSX6
@@ -129,7 +120,6 @@ function initApp() {
     configEditor.value = configSamples[0].content;
     renderUI();
     bindDOMEvents();
-    bindReactiveUi();
     // tryAutoLoadSample();
     update();
 }
@@ -237,7 +227,7 @@ function bindDOMEvents() {
     };
 
     copyBtn.onclick = () => {
-        navigator.clipboard.writeText(cliCommand.textContent);
+        navigator.clipboard.writeText($cliCommand());
         copyBtn.textContent = 'Copied!';
         setTimeout(() => copyBtn.textContent = 'Copy Command', 2000);
     };

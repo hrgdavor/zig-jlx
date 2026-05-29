@@ -35,8 +35,24 @@ jobs:
         with:
           version: '0.15.0'
 
-      - name: Build
-        run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }} --summary all
+      - name: Build (retry on transient fetch failures)
+        shell: pwsh
+        run: |
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "Build attempt $attempt/$maxAttempts for target ${{ matrix.target }}"
+            zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }} --summary all
+            if ($LASTEXITCODE -eq 0) {
+              exit 0
+            }
+
+            if ($attempt -lt $maxAttempts) {
+              Write-Warning "zig build failed (attempt $attempt). Retrying..."
+              Start-Sleep -Seconds (5 * $attempt)
+            }
+          }
+
+          throw "zig build failed after $maxAttempts attempts"
 
       - name: Package (Unix — tar.gz)
         if: runner.os != 'Windows'

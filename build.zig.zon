@@ -37,11 +37,11 @@
             .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
         },
         .libxev = .{
-            .url = "git+https://github.com/mitchellh/libxev#42d4ead52667e03619dcd5b1a3ca8ef7d5dd24ed",
+            .url = "https://codeload.github.com/mitchellh/libxev/tar.gz/42d4ead52667e03619dcd5b1a3ca8ef7d5dd24ed",
             .hash = "libxev-0.0.0-86vtc0IbEwBzMSXa-ZPZ8JpcV4Mw1SrsTuvtJmFAQ7Uu",
         },
         .args = .{
-            .url = "git+https://github.com/ikskuh/zig-args?ref=master#e060ac80c244e9675471b6d213b22ddc83cc8f98",
+            .url = "https://codeload.github.com/ikskuh/zig-args/tar.gz/e060ac80c244e9675471b6d213b22ddc83cc8f98",
             .hash = "args-0.0.0-CiLiqo_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d",
         },
     },

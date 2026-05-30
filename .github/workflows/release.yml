@@ -16,6 +16,9 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-linux-musl
             archive: jlx-linux-x86_64.tar.gz
+          - os: ubuntu-latest
+            target: x86_64-freebsd
+            archive: jlx-freebsd-x86_64.tar.gz
           - os: windows-latest
             target: x86_64-windows
             archive: jlx-windows-x86_64.zip

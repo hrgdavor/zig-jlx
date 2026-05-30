@@ -6,7 +6,7 @@
 - No other external dependencies; all Zig package dependencies are fetched automatically.
 
 > [!NOTE]
-> On **Linux**, `jlx` uses the kernel's native async I/O (`io_uring`/`epoll`) directly and does **not** depend on `libxev`. On **macOS** and **Windows**, it uses the [libxev](https://github.com/mitchellh/libxev) event library, which is fetched automatically.
+> On **Linux**, `jlx` uses the kernel's native async I/O (`io_uring`/`epoll`) directly and does **not** depend on `libxev`. On **macOS**, **FreeBSD**, and **Windows**, it uses the [libxev](https://github.com/mitchellh/libxev) event library, which is fetched automatically.
 
 ### Quick build (native — current platform)
 
@@ -51,6 +51,12 @@ zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-windows
 # Produces zig-out/bin/jlx.exe
 ```
 
+#### FreeBSD (x86_64)
+
+```sh
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-freebsd
+```
+
 ### Cross-compilation
 
 Zig supports cross-compilation out of the box. You can build for any target from any host:
@@ -64,6 +70,9 @@ zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-windows
 
 # Build a macOS ARM64 binary from Linux
 zig build -Doptimize=ReleaseSafe -Dtarget=aarch64-macos
+
+# Build a FreeBSD binary from Linux/macOS/Windows
+zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-freebsd
 ```
 
 ### Optimize modes

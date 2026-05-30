@@ -107,7 +107,7 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    if (target.result.os.tag == .linux or target.result.os.tag == .macos) {
+    if (target.result.os.tag == .linux or target.result.os.tag == .macos or target.result.os.tag == .freebsd) {
         exe.linkLibC();
     }
 
@@ -162,7 +162,7 @@ pub fn build(b: *std.Build) void {
     const mod_tests = b.addTest(.{
         .root_module = mod,
     });
-    if (target.result.os.tag == .linux or target.result.os.tag == .macos) {
+    if (target.result.os.tag == .linux or target.result.os.tag == .macos or target.result.os.tag == .freebsd) {
         mod_tests.linkLibC();
     }
 

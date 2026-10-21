@@ -1,5 +1,8 @@
 const std = @import("std");
 
+extern "c" fn lseek(fd: i32, offset: i64, whence: c_int) i64;
+extern "c" fn read(fd: i32, buf: *anyopaque, count: usize) i64;
+
 /// Common Interface for fast line extraction.
 pub const FastLineReader = struct {
     ptr: *anyopaque,
@@ -112,6 +115,62 @@ pub fn findLastLinesOffset(file: std.fs.File, n_lines: usize) !u64 {
     }
 
     return 0; // File has fewer than N lines, start from beginning.
+}
+
+pub fn findLastLinesOffsetFd(fd: i32, n_lines: usize) !u64 {
+    const total_size: i64 = lseek(fd, 0, 2); // SEEK_END
+    _ = lseek(fd, 0, 0); // SEEK_SET
+    if (total_size <= 0) return 0;
+
+    var n_remaining = n_lines;
+    const chunk_size = 32 * 1024;
+    var buf: [chunk_size]u8 = undefined;
+
+    var pos: i64 = total_size;
+
+    while (pos > 0) {
+        const read_size: i64 = if (pos < chunk_size) pos else chunk_size;
+        pos -= read_size;
+        _ = lseek(fd, pos, 0); // SEEK_SET
+        const n_read: i64 = read(fd, @ptrCast(&buf), @intCast(read_size));
+        if (n_read <= 0) break;
+        const chunk = buf[0..@intCast(n_read)];
+
+        if (findNthNewlineFromEndSIMD(chunk, &n_remaining)) |idx| {
+            return @as(usize, @intCast(pos)) + idx + 1;
+        }
+    }
+
+    return 0;
+}
+
+/// Cross-platform (std.Io) variant of `findLastLinesOffsetFd` that works on
+/// Windows, where raw POSIX fds are not usable with the C-runtime `read`.
+pub fn findLastLinesOffsetIo(file: std.Io.File, io: std.Io, n_lines: usize) !u64 {
+    const total_size = (try file.stat(io)).size;
+    if (total_size == 0) return 0;
+
+    var n_remaining = n_lines;
+    const chunk_size = 32 * 1024;
+    var buf: [chunk_size]u8 = undefined;
+    var reader_buf: [chunk_size]u8 = undefined;
+    var reader = file.reader(io, &reader_buf);
+
+    var pos: u64 = total_size;
+
+    while (pos > 0) {
+        const read_size: u64 = @min(pos, chunk_size);
+        pos -= read_size;
+        try reader.seekTo(pos);
+        const n_read: usize = try reader.interface.readSliceShort(buf[0..read_size]);
+        const chunk = buf[0..n_read];
+
+        if (findNthNewlineFromEndSIMD(chunk, &n_remaining)) |idx| {
+            return pos + idx + 1;
+        }
+    }
+
+    return 0;
 }
 
 const XevReader = @import("xev_reader.zig").XevReader;

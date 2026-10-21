@@ -11,38 +11,41 @@ const demo_client_js = web_assets.demo_js;
 const builtin = @import("builtin");
 const is_windows = builtin.os.tag == .windows;
 
+// C socket API for 0.17
+extern "c" fn socket(af: c_int, typ: c_int, protocol: c_int) std.posix.socket_t;
+extern "c" fn bind(sockfd: std.posix.socket_t, addr: *anyopaque, addrlen: c_ushort) c_int;
+extern "c" fn listen(sockfd: std.posix.socket_t, backlog: c_int) c_int;
+extern "c" fn accept(sockfd: std.posix.socket_t, addr: *anyopaque, addrlen: *c_ushort) std.posix.socket_t;
+extern "c" fn setsockopt(sockfd: std.posix.socket_t, level: c_int, optname: c_int, optval: *const anyopaque, optlen: c_uint) c_int;
+extern "c" fn recv(sockfd: std.posix.socket_t, buf: *anyopaque, len: c_int, flags: c_int) c_int;
+extern "c" fn send(sockfd: std.posix.socket_t, buf: *const anyopaque, len: c_int, flags: c_int) c_int;
+extern "c" fn close(fd: std.posix.socket_t) c_int;
+extern "c" fn _close(fd: i32) c_int;
+extern "c" fn closesocket(s: std.posix.socket_t) c_int;
+extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) i32;
+extern "c" fn lseek(fd: i32, offset: i64, whence: c_int) i64;
+extern "c" fn read(fd: i32, buf: *anyopaque, count: usize) i64;
+extern "c" fn WSAStartup(wVersionRequested: u16, lpWSAData: *anyopaque) c_int;
+
 fn socketRecv(handle: std.posix.socket_t, buf: []u8) !usize {
-    if (is_windows) {
-        const ws2_32 = std.os.windows.ws2_32;
-        const n = ws2_32.recv(handle, @ptrCast(buf.ptr), @intCast(buf.len), 0);
-        if (n == ws2_32.SOCKET_ERROR) {
-            const err = ws2_32.WSAGetLastError();
-            std.log.err("recv error: {d}", .{err});
-            return error.Unexpected;
-        }
-        return @intCast(n);
-    } else {
-        return try std.posix.recv(handle, buf, 0);
+    const n = recv(handle, @ptrCast(buf.ptr), @intCast(buf.len), 0);
+    if (n < 0) {
+        std.log.err("recv error", .{});
+        return error.Unexpected;
     }
+    return @intCast(n);
 }
 
 fn socketSend(handle: std.posix.socket_t, buf: []const u8) !void {
     var sent: usize = 0;
     while (sent < buf.len) {
-        if (is_windows) {
-            const ws2_32 = std.os.windows.ws2_32;
-            const n = ws2_32.send(handle, @ptrCast(buf.ptr + sent), @intCast(buf.len - sent), 0);
-            if (n == ws2_32.SOCKET_ERROR) {
-                const err = ws2_32.WSAGetLastError();
-                std.log.err("send error: {d}", .{err});
-                return error.Unexpected;
-            }
-            sent += @intCast(n);
-        } else {
-            const n = try std.posix.send(handle, buf[sent..], 0);
-            if (n == 0) return error.Unexpected;
-            sent += n;
+        const n = send(handle, @ptrCast(buf.ptr + sent), @intCast(buf.len - sent), 0);
+        if (n < 0) {
+            std.log.err("send error", .{});
+            return error.Unexpected;
         }
+        if (n == 0) return error.Unexpected;
+        sent += @intCast(n);
     }
 }
 
@@ -60,32 +63,85 @@ pub const Server = struct {
     }
 
     pub fn run(self: *Server) !void {
-        const port = self.args.port orelse 3000;
-        const address = std.net.Address.initIp4(.{ 0, 0, 0, 0 }, port);
-        var server = try address.listen(.{ .reuse_address = true });
-        defer server.deinit();
+        const port: u16 = if (self.args.port) |p| std.fmt.parseInt(u16, p, 10) catch 3000 else 3000;
+
+        // Windows: initialize Winsock
+        if (is_windows) {
+            var wsa_data: [128]u8 = undefined;
+            _ = WSAStartup(2, @ptrCast(&wsa_data));
+        }
+
+        // Create socket
+        const AF_INET: c_int = 2;
+        const SOCK_STREAM: c_int = 1;
+        const IPPROTO_TCP: c_int = 6;
+        const fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (is_windows) {
+            const INVALID_SOCKET: std.posix.socket_t = @ptrFromInt(~@as(usize, 0));
+            if (fd == INVALID_SOCKET) {
+                std.log.err("socket() failed", .{});
+                return;
+            }
+        } else {
+            if (fd < 0) {
+                std.log.err("socket() failed", .{});
+                return;
+            }
+        }
+
+        // SO_REUSEADDR
+        const one: [4]u8 = @bitCast(@as(u32, 1));
+        const SOL_SOCKET: c_int = 1;
+        const SO_REUSEADDR: c_int = 2;
+        _ = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, @ptrCast(&one), 4);
+
+        // Bind to 0.0.0.0:port
+        const sin: [16]u8 = blk: {
+            var s: [16]u8 = undefined;
+            @memset(&s, 0);
+            // sin_family = AF_INET (2)
+            s[0] = 2;
+            // sin_port = htons(port)
+            s[2] = @intCast((port >> 8) & 0xFF);
+            s[3] = @intCast(port & 0xFF);
+            break :blk s;
+        };
+        const sin_len: c_ushort = 16;
+        _ = bind(fd, @constCast(&sin), sin_len);
+
+        // Listen
+        _ = listen(fd, 128);
 
         std.log.info("jlx server listening on http://0.0.0.0:{d}", .{port});
 
         while (true) {
-            const conn = try server.accept();
+            var client_addr: [16]u8 = undefined;
+            var client_len: c_ushort = 16;
+            const conn_fd = accept(fd, @constCast(&client_addr), &client_len);
+            if (is_windows) {
+                const INVALID_SOCKET: std.posix.socket_t = @ptrFromInt(~@as(usize, 0));
+                if (conn_fd == INVALID_SOCKET) continue;
+            } else {
+                if (conn_fd < 0) continue;
+            }
+
             std.log.info("Client connected", .{});
-            const thread = try std.Thread.spawn(.{}, handleConnectionThread, .{ self, conn });
+            const thread = try std.Thread.spawn(.{}, handleConnectionThreadFd, .{ self, conn_fd });
             thread.detach();
         }
     }
 
-    fn handleConnectionThread(self: *Server, conn: std.net.Server.Connection) void {
-        self.handleConnection(conn) catch |err| {
+    fn handleConnectionThreadFd(self: *Server, conn_fd: std.posix.socket_t) void {
+        self.handleConnectionFd(conn_fd) catch |err| {
             std.log.err("Error handling connection: {}", .{err});
         };
     }
 
-    fn handleConnection(self: *Server, conn: std.net.Server.Connection) !void {
-        defer conn.stream.close();
+    fn handleConnectionFd(self: *Server, conn_fd: std.posix.socket_t) !void {
+        defer _ = closesocket(conn_fd);
 
         var buf: [4096]u8 = undefined;
-        const n = try socketRecv(conn.stream.handle, &buf);
+        const n = try socketRecv(conn_fd, &buf);
         if (n == 0) return;
 
         const request = buf[0..n];
@@ -100,35 +156,52 @@ pub const Server = struct {
         if (!std.mem.eql(u8, method, "GET")) {
             std.log.info("Method not allowed: {s}", .{method});
             const msg = "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n";
-            try socketSend(conn.stream.handle, msg);
+            try socketSend(conn_fd, msg);
             return;
         }
 
         if (std.mem.eql(u8, path, "/")) {
-            try self.sendStatic(conn.stream.handle, "text/html", index_html);
+            try self.sendStatic(conn_fd, "text/html", index_html);
         } else if (std.mem.eql(u8, path, "/demo-client.js")) {
-            try self.sendStatic(conn.stream.handle, "application/javascript", demo_client_js);
+            try self.sendStatic(conn_fd, "application/javascript", demo_client_js);
         } else if (std.mem.startsWith(u8, path, "/sse")) {
-            try self.handleSSE(conn.stream.handle, path);
+            try self.handleSSE(conn_fd, path);
         } else {
             // Try serving from --www if specified
             if (self.args.www) |www_path| {
                 const relative_path = if (std.mem.startsWith(u8, path, "/")) path[1..] else path;
-                var dir = try std.fs.cwd().openDir(www_path, .{});
-                defer dir.close();
-                const file = dir.openFile(relative_path, .{}) catch {
+                // Build full path: www_path + "/" + relative_path
+                var full_path = try self.allocator.alloc(u8, www_path.len + 1 + relative_path.len + 1);
+                defer self.allocator.free(full_path);
+                @memcpy(full_path[0..www_path.len], www_path);
+                full_path[www_path.len] = '/';
+                @memcpy(full_path[www_path.len + 1 .. full_path.len - 1], relative_path);
+                full_path[full_path.len - 1] = 0;
+
+                const fd = open(full_path[0..full_path.len - 1 :0], 0, 0);
+                if (fd < 0) {
                     const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                    try socketSend(conn.stream.handle, msg);
+                    try socketSend(conn_fd, msg);
                     return;
-                };
-                defer file.close();
-                const content = try file.readToEndAlloc(self.allocator, 10 * 1024 * 1024);
+                }
+                defer _ = _close(fd);
+
+                const file_size: i64 = lseek(fd, 0, 2);
+                _ = lseek(fd, 0, 0);
+                if (file_size < 0 or file_size > 10 * 1024 * 1024) {
+                    const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+                    try socketSend(conn_fd, msg);
+                    return;
+                }
+                const content = try self.allocator.alloc(u8, @intCast(file_size));
                 defer self.allocator.free(content);
+                const n_read = read(fd, content.ptr, content.len);
+                const data = content[0..@intCast(n_read)];
                 const mime = if (std.mem.endsWith(u8, path, ".js")) "application/javascript" else "text/plain";
-                try self.sendStatic(conn.stream.handle, mime, content);
+                try self.sendStatic(conn_fd, mime, data);
             } else {
                 const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
-                try socketSend(conn.stream.handle, msg);
+                try socketSend(conn_fd, msg);
             }
         }
     }
@@ -222,20 +295,33 @@ pub const Server = struct {
         const sse_writer = SseWriter{ .handle = handle };
 
         if (sse_args.file_path) |fpath| {
-            const file = try std.fs.cwd().openFile(fpath, .{});
-            defer file.close();
+            var io_threaded = std.Io.Threaded.init(self.allocator, .{});
+            const io = (&io_threaded).io();
 
+            var reader_buf: [32 * 1024]u8 = undefined;
+
+            const file = processor_mod.Processor.openFileIo(io, fpath) catch {
+                std.log.err("could not open {s}", .{fpath});
+                return;
+            };
+            defer file.close(io);
+
+            var tail_offset: ?u64 = null;
             if (sse_args.range) |rs| {
                 if (std.fmt.parseInt(i64, rs, 10)) |val| {
                     if (val < 0) {
-                        const offset = try fast_reader_mod.findLastLinesOffset(file, @intCast(-val));
-                        try file.seekTo(offset);
+                        tail_offset = try fast_reader_mod.findLastLinesOffsetIo(file, io, @intCast(-val));
                     }
                 } else |_| {}
             }
 
+            var reader = file.reader(io, &reader_buf);
+            if (tail_offset) |off| {
+                _ = reader.seekTo(off) catch {};
+            }
+
             if (sse_args.follow) {
-                try processor.followFile(file, sse_writer, &ctx);
+                try processor.followFile(&reader, sse_writer, &ctx);
             } else {
                 var limit: ?usize = null;
                 if (sse_args.range) |rs| {
@@ -243,7 +329,7 @@ pub const Server = struct {
                         if (val > 0) limit = @intCast(val);
                     } else |_| {}
                 }
-                try processor.processStream(file, sse_writer, &ctx, limit);
+                try processor.processStream(&reader, sse_writer, &ctx, limit);
             }
         }
     }

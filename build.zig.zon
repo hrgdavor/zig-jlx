@@ -33,16 +33,16 @@
     // internet connectivity.
     .dependencies = .{
         .mvzr = .{
-            .url = "https://codeload.github.com/mnemnion/mvzr/tar.gz/refs/tags/v0.3.7",
+            .url = "https://codeload.github.com/mnemnion/mvzr/tar.gz/refs/tags/v0.3.12",
             .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
         },
         .libxev = .{
-            .url = "https://codeload.github.com/mitchellh/libxev/tar.gz/42d4ead52667e03619dcd5b1a3ca8ef7d5dd24ed",
+            .url = "https://codeload.github.com/mitchellh/libxev/tar.gz/451a2bc03644c2b70fb28a808313d12989bfa8e3",
             .hash = "libxev-0.0.0-86vtc0IbEwBzMSXa-ZPZ8JpcV4Mw1SrsTuvtJmFAQ7Uu",
         },
         .args = .{
-            .url = "https://codeload.github.com/ikskuh/zig-args/tar.gz/e060ac80c244e9675471b6d213b22ddc83cc8f98",
-            .hash = "args-0.0.0-CiLiqo_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d",
+            .url = "https://codeload.github.com/ikskuh/zig-args/tar.gz/ad3c89ecdb2979b8b5d52b43b78e79bf51293235",
+            .hash = "N-V-__8AAI_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d",
         },
     },
     .paths = .{

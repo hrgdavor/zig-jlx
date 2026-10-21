@@ -4,6 +4,15 @@ const config_mod = @import("config.zig");
 const processor_mod = @import("processor.zig");
 const server_mod = @import("server.zig");
 
+extern "c" fn GetStdHandle(nStdHandle: i32) ?*anyopaque;
+extern "c" fn WriteFile(hFile: ?*anyopaque, lpBuffer: *const anyopaque, nNumberOfBytesToWrite: u32, lpNumberOfBytesWritten: *u32, lpOverlapped: ?*anyopaque) i32;
+
+fn writeStderr(s: []const u8) void {
+    const handle = GetStdHandle(-12) orelse return; // STD_ERROR_HANDLE
+    var written: u32 = 0;
+    _ = WriteFile(handle, @ptrCast(s.ptr), @intCast(s.len), &written, null);
+}
+
 const HELP =
     \\Usage: jlx -c <config> [options] [file]
     \\Run `jlx --help` for a full list of options.
@@ -31,9 +40,7 @@ const HELP =
 ;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.c_allocator;
 
     var parse_arena = std.heap.ArenaAllocator.init(allocator);
     defer parse_arena.deinit();
@@ -46,28 +53,15 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    if (args.config == null and !args.keys and !args.strip) {
-        var stderr_buffer: [4096]u8 = undefined;
-        var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
-        const stderr = &stderr_writer.interface;
+    if (args.config == null and !args.keys and !args.strip and !args.serve) {
+        writeStderr(HELP);
 
-        try stderr.writeAll(HELP);
-
-        // If a file path was given, resolve its parent and inject it into the sample
-        if (args.file_path) |fp| {
-            var real_buf: [4096]u8 = undefined;
-            const real = std.fs.cwd().realpath(fp, &real_buf) catch fp;
-            const parent = std.fs.path.dirname(real) orelse real;
-            try stderr.print(
-                \\
-                \\; Suggested paths for your file:
-                \\paths     = {s}
-                \\
-            , .{parent});
+        // If a file path was given, inject a suggestion
+        if (args.file_path != null) {
+            writeStderr("; Suggested paths for your file:\npaths = <parent directory of your file>\n");
         }
 
-        try stderr.writeAll("\n");
-        try stderr.flush();
+        writeStderr("\n");
         std.process.exit(1);
     }
 
@@ -80,7 +74,7 @@ pub fn main() !void {
 
     if (args.serve) {
         var final_args = args;
-        if (final_args.port == null) final_args.port = config.port orelse 3000;
+        if (final_args.port == null) final_args.port = "3000";
         if (final_args.www == null) final_args.www = config.www;
 
         var server = server_mod.Server.init(allocator, final_args, &config);

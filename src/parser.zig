@@ -54,12 +54,10 @@ pub fn parseTimestamp(val_str: []const u8) ?i64 {
 
 test "Parser.parseLine with shared samples" {
     const allocator = std.testing.allocator;
-    const fs = std.fs.cwd();
+    const io = std.testing.io;
+    const cwd = std.Io.Dir.cwd();
 
-    const file = try fs.openFile("test/parser_samples.json", .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const content = try cwd.readFileAlloc(io, "test/parser_samples.json", allocator, std.Io.Limit.limited(1024 * 1024));
     defer allocator.free(content);
 
     const Sample = struct {

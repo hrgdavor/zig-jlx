@@ -1,6 +1,9 @@
 const std = @import("std");
 const args_lib = @import("args");
 
+extern "c" fn puts(s: [*:0]const u8) c_int;
+extern "c" fn printf(fmt: [*:0]const u8, ...) c_int;
+
 pub const Args = struct {
     config: ?[]const u8 = null,
     profile: ?[]const u8 = null,
@@ -27,7 +30,7 @@ pub const Args = struct {
 
     // Server mode
     serve: bool = false,
-    port: ?u16 = null,
+    port: ?[]const u8 = null,
     www: ?[]const u8 = null,
 
     pub const ArgsConfig = struct {
@@ -48,7 +51,7 @@ pub const Args = struct {
         help: bool = false,
 
         serve: bool = false,
-        port: ?u16 = null,
+        port: ?[]const u8 = null,
         www: ?[]const u8 = null,
 
         // zig-args uses this specific field name for short flags
@@ -99,9 +102,9 @@ pub const Args = struct {
         var args = Args{};
 
         // Maintain your logic: copy fields from the parser result to your Args struct.
-        inline for (@typeInfo(ArgsConfig).@"struct".fields) |f| {
-            if (@hasField(Args, f.name)) {
-                @field(args, f.name) = @field(parsed.options, f.name);
+        inline for (@typeInfo(ArgsConfig).@"struct".field_names) |f_name| {
+            if (@hasField(Args, f_name)) {
+                @field(args, f_name) = @field(parsed.options, f_name);
             }
         }
 
@@ -114,41 +117,39 @@ pub const Args = struct {
     }
 
     pub fn printHelp() !void {
-        var stdout_buffer: [1024]u8 = undefined;
-        var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-        const stdout = &stdout_writer.interface;
         const config = ArgsConfig;
 
-        try stdout.print("Usage: [options] [file]\n\nOptions:\n", .{});
+        const usage: [*:0]const u8 = "Usage: [options] [file]\n\nOptions:\n";
+        _ = puts(usage);
 
-        inline for (@typeInfo(config).@"struct".fields) |field| {
+        inline for (@typeInfo(config).@"struct".field_names) |field_name| {
             // Skip internal metadata fields
-            comptime if (std.mem.eql(u8, field.name, "help")) continue;
+            comptime if (std.mem.eql(u8, field_name, "help")) continue;
 
             // Find if there's a shorthand for this field
             var short_char: ?u8 = null;
-            inline for (@typeInfo(@TypeOf(config.shorthands)).@"struct".fields) |s| {
-                if (std.mem.eql(u8, @field(config.shorthands, s.name), field.name)) {
-                    short_char = s.name[0];
+            inline for (@typeInfo(@TypeOf(config.shorthands)).@"struct".field_names) |s_name| {
+                if (std.mem.eql(u8, @field(config.shorthands, s_name), field_name)) {
+                    short_char = s_name[0];
                 }
             }
 
             // Get the help message
-            const msg = if (@hasField(@TypeOf(config.__messages__), field.name))
-                @field(config.__messages__, field.name)
+            const msg = if (@hasField(@TypeOf(config.__messages__), field_name))
+                @field(config.__messages__, field_name)
             else
                 "";
 
             // Print the formatted line
-            if (short_char) |c| {
-                try stdout.print("  -{c}, --{s:<15} {s}\n", .{ c, field.name, msg });
+            const fn_name: [*:0]const u8 = field_name;
+            const fn_msg: [*:0]const u8 = msg;
+            if (short_char) |sc| {
+                const fmt: [*:0]const u8 = "  -%c, --%-12s %s\n";
+                _ = printf(fmt, sc, fn_name, fn_msg);
             } else {
-                try stdout.print("      --{s:<15} {s}\n", .{ field.name, msg });
+                const fmt: [*:0]const u8 = "      --%-12s %s\n";
+                _ = printf(fmt, fn_name, fn_msg);
             }
         }
-
-        try stdout.print("  -h, --help            {s}\n", .{config.__messages__.help});
-
-        try stdout.flush();
     }
 };

@@ -74,8 +74,10 @@ pub fn build(b: *std.Build) void {
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
     const web_assets = b.addOptions();
-    const index_html = b.build_root.handle.readFileAlloc(b.allocator, "zig-out/web/index.html", 1024 * 1024) catch "";
-    const demo_js = b.build_root.handle.readFileAlloc(b.allocator, "zig-out/web/demo-client.js", 1024 * 1024) catch "";
+    const io = b.graph.io;
+    const root_dir = std.Io.Dir.cwd();
+    const index_html = root_dir.readFileAlloc(io, "zig-out/web/index.html", b.allocator, std.Io.Limit.limited(1024 * 1024)) catch "";
+    const demo_js = root_dir.readFileAlloc(io, "zig-out/web/demo-client.js", b.allocator, std.Io.Limit.limited(1024 * 1024)) catch "";
     web_assets.addOption([]const u8, "index_html", index_html);
     web_assets.addOption([]const u8, "demo_js", demo_js);
 
@@ -107,8 +109,10 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
-    if (target.result.os.tag == .linux or target.result.os.tag == .macos or target.result.os.tag == .freebsd) {
-        exe.linkLibC();
+    exe.root_module.link_libc = true;
+    if (target.result.os.tag == .windows) {
+        exe.root_module.linkSystemLibrary("ws2_32", .{});
+        exe.root_module.linkSystemLibrary("kernel32", .{});
     }
 
     if (target.result.os.tag != .linux) {
@@ -120,7 +124,7 @@ pub fn build(b: *std.Build) void {
         mod.addImport("xev", xev_dep.module("xev"));
     }
 
-    if (optimize != .Debug) {
+    if (optimize != .debug) {
         exe.root_module.strip = true;
     }
 
@@ -151,10 +155,9 @@ pub fn build(b: *std.Build) void {
     run_cmd.step.dependOn(b.getInstallStep());
 
     // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    // command itself, like this: `zig build run -- arg1 arg2 etc`.
+    // In Zig 0.17 the build runner automatically forwards CLI args to the run
+    // step, so no manual forwarding is needed.
 
     // Creates an executable that will run `test` blocks from the provided module.
     // Here `mod` needs to define a target, which is why earlier we made sure to
@@ -162,9 +165,7 @@ pub fn build(b: *std.Build) void {
     const mod_tests = b.addTest(.{
         .root_module = mod,
     });
-    if (target.result.os.tag == .linux or target.result.os.tag == .macos or target.result.os.tag == .freebsd) {
-        mod_tests.linkLibC();
-    }
+    mod_tests.root_module.link_libc = true;
 
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);

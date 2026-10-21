@@ -1,9 +1,21 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const args_mod = @import("args.zig");
 const config_mod = @import("config.zig");
 const parser_mod = @import("parser.zig");
 const filter_mod = @import("filter.zig");
 const fast_reader_mod = @import("fast_reader.zig");
+
+extern "c" fn write(fd: i32, buf: *const anyopaque, count: usize) i64;
+extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) i32;
+extern "c" fn close(fd: i32) c_int;
+extern "c" fn read(fd: i32, buf: *anyopaque, count: usize) i64;
+extern "c" fn lseek(fd: i32, offset: i64, whence: c_int) i64;
+extern "c" fn Sleep(ms: u32) u32;
+
+fn sleepMs(ms: u64) void {
+    _ = Sleep(@intCast(ms));
+}
 
 const DUMMY_CFG = config_mod.FolderConfig{
     .paths = &[_][]const u8{},
@@ -62,7 +74,7 @@ pub const Processor = struct {
             .config = config,
             .seen_values = std.StringHashMap(void).init(allocator),
             .all_found_keys = std.StringHashMap(void).init(allocator),
-            .side_buffer = .{},
+            .side_buffer = std.ArrayListUnmanaged(u8).empty,
             .zone_offset_secs = 0,
         };
 
@@ -105,16 +117,22 @@ pub const Processor = struct {
     }
 
     pub fn run(self: *Processor) !void {
-        var stdout_buffer: [16384]u8 = undefined;
-        var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+        var io_threaded = std.Io.Threaded.init(self.allocator, .{});
+        const io = (&io_threaded).io();
 
-        try self.runInternal(&stdout_writer.interface);
-        try stdout_writer.interface.flush();
+        var stdout_buffer: [1048576]u8 = undefined;
+        var stdout_writer = std.Io.Writer.fixed(&stdout_buffer);
+
+        try self.runInternal(&stdout_writer, io);
+        const written = stdout_buffer[0 .. std.Io.Writer.buffered(&stdout_writer).len];
+        if (written.len > 0) {
+            _ = write(1, @constCast(written.ptr), written.len);
+        }
     }
 
-    pub fn runInternal(self: *Processor, writer: anytype) !void {
+    pub fn runInternal(self: *Processor, writer: anytype, io: std.Io) !void {
         if (self.args.strip) {
-            try self.runStripPrefix(writer);
+            try self.runStripPrefix(writer, io);
             return;
         }
 
@@ -122,26 +140,33 @@ pub const Processor = struct {
         var ctx = try self.buildContext();
         defer ctx.deinit(self.allocator);
 
+        var reader_buf: [32 * 1024]u8 = undefined;
+
         if (self.args.file_path) |path| {
-            const file = try std.fs.cwd().openFile(path, .{});
-            defer file.close();
+            const file = try openFileIo(io, path);
+            defer file.close(io);
 
             var limit: ?usize = null;
+            var tail_offset: ?u64 = null;
             if (self.args.range) |rs| {
                 if (std.fmt.parseInt(i64, rs, 10)) |val| {
                     if (val > 0) {
                         limit = @intCast(val);
                     } else if (val < 0) {
-                        const offset = try fast_reader_mod.findLastLinesOffset(file, @intCast(-val));
-                        try file.seekTo(offset);
+                        tail_offset = try fast_reader_mod.findLastLinesOffsetIo(file, io, @intCast(-val));
                     }
                 } else |_| {}
             }
 
+            var reader = file.reader(io, &reader_buf);
+            if (tail_offset) |off| {
+                _ = reader.seekTo(off) catch {};
+            }
+
             if (self.args.follow) {
-                try self.followFile(file, writer, &ctx);
+                try self.followFile(&reader, writer, &ctx);
             } else {
-                try self.processStream(file, writer, &ctx, limit);
+                try self.processStream(&reader, writer, &ctx, limit);
             }
         } else {
             // No file specified — read from stdin
@@ -152,7 +177,9 @@ pub const Processor = struct {
                     // Tail not supported for stdin (cannot seek)
                 } else |_| {}
             }
-            try self.processStream(std.fs.File.stdin(), writer, &ctx, limit);
+            const stdin_file = std.Io.File.stdin();
+            var reader = stdin_file.reader(io, &reader_buf);
+            try self.processStream(&reader, writer, &ctx, limit);
         }
 
         if (self.args.keys) {
@@ -160,18 +187,33 @@ pub const Processor = struct {
         }
     }
 
-    fn runStripPrefix(self: *Processor, writer: anytype) !void {
+    /// Open a read-only file via std.Io, handling both absolute and relative
+    /// paths so the result is a usable `std.Io.File` on every platform.
+    pub fn openFileIo(io: std.Io, path: []const u8) std.Io.File.OpenError!std.Io.File {
+        if (std.fs.path.isAbsolute(path)) {
+            return std.Io.Dir.openFileAbsolute(io, path, .{ .mode = .read_only });
+        }
+        return std.Io.Dir.cwd().openFile(io, path, .{ .mode = .read_only });
+    }
+
+    fn runStripPrefix(self: *Processor, writer: anytype, io: std.Io) !void {
+        var reader_buf: [32 * 1024]u8 = undefined;
+
         if (self.args.file_path) |path| {
-            const file = try std.fs.cwd().openFile(path, .{});
-            defer file.close();
+            const file = try openFileIo(io, path);
+            defer file.close(io);
+
+            var reader = file.reader(io, &reader_buf);
 
             if (self.args.follow) {
-                try self.followStripPrefixFile(file, writer);
+                try self.followStripPrefixFile(&reader, writer);
             } else {
-                try self.processStripPrefixStream(file, writer);
+                try self.processStripPrefixStream(&reader, writer);
             }
         } else {
-            try self.processStripPrefixStream(std.fs.File.stdin(), writer);
+            const stdin_file = std.Io.File.stdin();
+            var reader = stdin_file.reader(io, &reader_buf);
+            try self.processStripPrefixStream(&reader, writer);
         }
     }
 
@@ -186,13 +228,13 @@ pub const Processor = struct {
         try writer.writeAll("\n");
     }
 
-    fn processStripPrefixStream(self: *Processor, file: std.fs.File, writer: anytype) !void {
+    fn processStripPrefixStream(self: *Processor, reader: *std.Io.File.Reader, writer: anytype) !void {
         var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
         while (true) {
-            const n = try file.read(buf);
-            const eof = n == 0;
+            const n: usize = try reader.interface.readSliceShort(buf);
+            if (n == 0) break;
             const data = buf[0..n];
 
             var read_pos: usize = 0;
@@ -214,14 +256,6 @@ pub const Processor = struct {
                 try self.side_buffer.appendSlice(self.allocator, straddle);
             }
 
-            if (eof) {
-                if (self.side_buffer.items.len > 0) {
-                    try self.writeStripPrefixLine(self.side_buffer.items, writer);
-                    self.side_buffer.clearRetainingCapacity();
-                }
-                break;
-            }
-
             const max_side_buf = 16 * 1024 * 1024;
             if (self.side_buffer.items.len > max_side_buf) {
                 return error.MaxBufferSizeReached;
@@ -229,23 +263,17 @@ pub const Processor = struct {
         }
     }
 
-    fn followStripPrefixFile(self: *Processor, file: std.fs.File, writer: anytype) !void {
+    fn followStripPrefixFile(self: *Processor, reader: *std.Io.File.Reader, writer: anytype) !void {
         var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
-        var pos = try file.getPos();
-
         while (true) {
-            const n = try file.read(buf);
+            const n: usize = try reader.interface.readSliceShort(buf);
             if (n == 0) {
-                if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
-                    try writer.flush();
-                }
-                std.Thread.sleep(100 * std.time.ns_per_ms);
-                pos = file.getPos() catch pos;
+                try writer.flush();
+                sleepMs(100);
                 continue;
             }
-            pos += n;
 
             var read_pos: usize = 0;
             const data = buf[0..n];
@@ -276,7 +304,7 @@ pub const Processor = struct {
     }
 
     fn reportDiscoveredKeys(self: *Processor, writer: anytype) !void {
-        var keys_list: std.ArrayListUnmanaged([]const u8) = .{};
+        var keys_list: std.ArrayListUnmanaged([]const u8) = .empty;
         defer keys_list.deinit(self.allocator);
 
         var it = self.all_found_keys.keyIterator();
@@ -302,8 +330,7 @@ pub const Processor = struct {
 
     fn findFolderConfig(self: *const Processor) *const config_mod.FolderConfig {
         if (self.args.file_path) |fp| {
-            var file_real_buf: [4096]u8 = undefined;
-            const file_real = std.fs.cwd().realpath(fp, &file_real_buf) catch fp;
+            const file_real: []const u8 = fp;
             const file_dir = std.fs.path.dirname(file_real) orelse file_real;
 
             var matched: ?*const config_mod.FolderConfig = null;
@@ -369,9 +396,9 @@ pub const Processor = struct {
         }
 
         // Build Filter lists: folder config → profile → CLI args
-        var include_list: std.ArrayListUnmanaged(filter_mod.Filter) = .{};
+        var include_list: std.ArrayListUnmanaged(filter_mod.Filter) = .empty;
         errdefer include_list.deinit(self.allocator);
-        var exclude_list: std.ArrayListUnmanaged(filter_mod.Filter) = .{};
+        var exclude_list: std.ArrayListUnmanaged(filter_mod.Filter) = .empty;
         errdefer exclude_list.deinit(self.allocator);
 
         for (cfg.include_filters) |s| try include_list.append(self.allocator, try filter_mod.Filter.parse(self.allocator, s));
@@ -426,7 +453,7 @@ pub const Processor = struct {
         };
     }
 
-    pub fn processStream(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext, limit: ?usize) !void {
+    pub fn processStream(self: *Processor, reader: *std.Io.File.Reader, writer: anytype, ctx: *const LineContext, limit: ?usize) !void {
         var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
@@ -440,13 +467,13 @@ pub const Processor = struct {
         while (true) {
             if (limit) |l| if (matched_count >= l) break;
 
-            const n = try file.read(buf);
-            if (n == 0) {
+            const n_usize: usize = try reader.interface.readSliceShort(buf);
+            if (n_usize == 0) {
                 eof = true;
             }
 
             var read_pos: usize = 0;
-            const data = buf[0..n];
+            const data = buf[0..n_usize];
 
             while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
                 if (limit) |l| if (matched_count >= l) break;
@@ -505,9 +532,7 @@ pub const Processor = struct {
         }
     }
 
-    pub fn followFile(self: *Processor, file: std.fs.File, writer: anytype, ctx: *const LineContext) !void {
-        var pos = try file.getPos();
-
+    pub fn followFile(self: *Processor, reader: *std.Io.File.Reader, writer: anytype, ctx: *const LineContext) !void {
         var buf = try self.allocator.alloc(u8, 32 * 1024);
         defer self.allocator.free(buf);
 
@@ -516,20 +541,16 @@ pub const Processor = struct {
         const arena = arena_instance.allocator();
 
         while (true) {
-            const n = try file.read(buf);
-            if (n == 0) {
+            const n_usize: usize = try reader.interface.readSliceShort(buf);
+            if (n_usize == 0) {
                 // Flush before sleeping to show progress
-                if (comptime std.meta.hasMethod(@TypeOf(writer), "flush")) {
-                    try writer.flush();
-                }
-                std.Thread.sleep(100 * std.time.ns_per_ms);
-                pos = file.getPos() catch pos;
+                try writer.flush();
+                sleepMs(100);
                 continue;
             }
-            pos += n;
 
             var read_pos: usize = 0;
-            const data = buf[0..n];
+            const data = buf[0..n_usize];
 
             while (std.mem.indexOfScalarPos(u8, data, read_pos, '\n')) |nl_idx| {
                 const fragment = data[read_pos..nl_idx];
@@ -1131,12 +1152,10 @@ pub const Processor = struct {
 
 test "Processor.processLine with shared samples" {
     const allocator = std.testing.allocator;
-    const fs = std.fs.cwd();
+    const io = std.testing.io;
+    const cwd = std.Io.Dir.cwd();
 
-    const file = try fs.openFile("test/processor_samples.json", .{});
-    defer file.close();
-
-    const content = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const content = try cwd.readFileAlloc(io, "test/processor_samples.json", allocator, std.Io.Limit.limited(1024 * 1024));
     defer allocator.free(content);
 
     const Sample = struct {
@@ -1183,30 +1202,50 @@ test "Processor.processLine with shared samples" {
         const arena = arena_instance.allocator();
 
         var out_buf: [4096]u8 = undefined;
-        var fbs = std.io.fixedBufferStream(&out_buf);
-        const writer = fbs.writer();
+        var w = std.Io.Writer.fixed(&out_buf);
+        const writer = &w;
 
         const matched = try processor.processLine(arena, sample.line, writer, &ctx);
 
+        const written_len = std.Io.Writer.buffered(&w).len;
         if (sample.expected) |expected| {
             if (!matched) {
                 std.debug.print("Sample '{s}' expected match but got none\n", .{sample.name});
                 return error.ExpectedMatch;
             }
             // Output includes newline
-            const actual = std.mem.trimRight(u8, fbs.getWritten(), "\n\r");
+            const actual = std.mem.trimEnd(u8, out_buf[0..written_len], "\n\r");
             try std.testing.expectEqualStrings(expected, actual);
         } else {
             if (matched) {
-                std.debug.print("Sample '{s}' expected no match but got one: {s}\n", .{ sample.name, fbs.getWritten() });
+                std.debug.print("Sample '{s}' expected no match but got one: {s}\n", .{ sample.name, out_buf[0..written_len] });
                 return error.ExpectedNoMatch;
             }
         }
     }
 }
 
+/// Simple writer that appends to an `ArrayListUnmanaged(u8)` buffer. Used by
+/// the tests in place of the removed `ArrayListUnmanaged.writer` API.
+const OutBufWriter = struct {
+    buf: *std.ArrayListUnmanaged(u8),
+    allocator: std.mem.Allocator,
+
+    pub fn writeAll(w: @This(), bytes: []const u8) !void {
+        try w.buf.appendSlice(w.allocator, bytes);
+    }
+    pub fn write(w: @This(), bytes: []const u8) !usize {
+        try w.buf.appendSlice(w.allocator, bytes);
+        return bytes.len;
+    }
+    pub fn flush(w: @This()) !void {
+        _ = w;
+    }
+};
+
 test "Processor straddle and overflow" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
 
     const test_dir = std.testing.tmpDir(.{});
     var tmp_dir = test_dir;
@@ -1226,14 +1265,16 @@ test "Processor straddle and overflow" {
     large_line[large_line.len - 2] = '"';
     large_line[large_line.len - 1] = '}';
 
-    var file = try tmp_dir.dir.createFile("large.txt", .{ .read = true });
-    try file.writeAll("{\"msg\":\"short\"}\n");
-    try file.writeAll(large_line);
-    try file.writeAll("\n{\"msg\":\"end\"}");
-    file.close();
+    var wbuf: [4096]u8 = undefined;
+    var file = try tmp_dir.dir.createFile(io, "large.txt", .{ .read = true });
+    var w = file.writer(io, &wbuf);
+    try w.interface.writeAll("{\"msg\":\"short\"}\n");
+    try w.interface.writeAll(large_line);
+    try w.interface.writeAll("\n{\"msg\":\"end\"}");
+    file.close(io);
 
-    file = try tmp_dir.dir.openFile("large.txt", .{ .mode = .read_only });
-    defer file.close();
+    file = try tmp_dir.dir.openFile(io, "large.txt", .{ .mode = .read_only });
+    defer file.close(io);
 
     var args = @import("args.zig").Args{};
     args.passthrough = true;
@@ -1247,33 +1288,40 @@ test "Processor straddle and overflow" {
     var processor = Processor.init(allocator, args, &config);
     defer processor.deinit();
 
-    var out_buf = std.ArrayListUnmanaged(u8){};
+    var out_buf = std.ArrayListUnmanaged(u8).empty;
     defer out_buf.deinit(allocator);
 
     var ctx = try processor.buildContext();
     defer ctx.deinit(allocator);
 
-    try processor.processStream(file, out_buf.writer(allocator), &ctx, null);
+    var reader_buf: [32 * 1024]u8 = undefined;
+    var reader = file.reader(io, &reader_buf);
+    const out_writer = OutBufWriter{ .buf = &out_buf, .allocator = allocator };
+    try processor.processStream(&reader, out_writer, &ctx, null);
 
     try std.testing.expect(out_buf.items.len > 150 * 1024);
 }
 
 test "Processor strip mode removes leading prefix before first brace" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
 
     const test_dir = std.testing.tmpDir(.{});
     var tmp_dir = test_dir;
     defer tmp_dir.cleanup();
 
-    var file = try tmp_dir.dir.createFile("strip.txt", .{ .read = true });
-    try file.writeAll("INFO 2026-01-01 {\"k\":\"v\"}\n");
-    try file.writeAll("this line has no json\n");
-    try file.writeAll("DBG {\"n\":1}\r\n");
-    try file.writeAll("{\"raw\":true}\n");
-    file.close();
+    var wbuf: [4096]u8 = undefined;
+    var file = try tmp_dir.dir.createFile(io, "strip.txt", .{ .read = true });
+    var w = file.writer(io, &wbuf);
+    try w.interface.writeAll("INFO 2026-01-01 {\"k\":\"v\"}\n");
+    try w.interface.writeAll("this line has no json\n");
+    try w.interface.writeAll("DBG {\"n\":1}\r\n");
+    try w.interface.writeAll("{\"raw\":true}\n");
+    try w.interface.flush();
+    file.close(io);
 
-    file = try tmp_dir.dir.openFile("strip.txt", .{ .mode = .read_only });
-    defer file.close();
+    file = try tmp_dir.dir.openFile(io, "strip.txt", .{ .mode = .read_only });
+    defer file.close(io);
 
     var args = @import("args.zig").Args{};
     args.strip = true;
@@ -1288,10 +1336,13 @@ test "Processor strip mode removes leading prefix before first brace" {
     var processor = Processor.init(allocator, args, &config);
     defer processor.deinit();
 
-    var out_buf = std.ArrayListUnmanaged(u8){};
+    var out_buf = std.ArrayListUnmanaged(u8).empty;
     defer out_buf.deinit(allocator);
 
-    try processor.processStripPrefixStream(file, out_buf.writer(allocator));
+    var reader_buf: [32 * 1024]u8 = undefined;
+    var reader = file.reader(io, &reader_buf);
+    const out_writer = OutBufWriter{ .buf = &out_buf, .allocator = allocator };
+    try processor.processStripPrefixStream(&reader, out_writer);
 
     try std.testing.expectEqualStrings(
         "{\"k\":\"v\"}\n{\"n\":1}\n{\"raw\":true}\n",

@@ -1,5 +1,11 @@
 const std = @import("std");
 
+extern "c" fn fopen(filename: [*:0]const u8, mode: [*:0]const u8) ?*anyopaque;
+extern "c" fn fread(ptr: *anyopaque, size: usize, count: usize, stream: ?*anyopaque) usize;
+extern "c" fn fseeko(stream: ?*anyopaque, offset: i64, whence: c_int) c_int;
+extern "c" fn ftello(stream: ?*anyopaque) i64;
+extern "c" fn fclose(stream: ?*anyopaque) c_int;
+
 pub const Profile = struct {
     name: []const u8,
     output_format: ?[]const u8 = null,
@@ -39,7 +45,7 @@ pub const Config = struct {
     port: ?u16 = null,
     www: ?[]const u8 = null,
     zone: ?[]const u8 = null,
-    folders: std.ArrayListUnmanaged(FolderConfig) = .{},
+    folders: std.ArrayListUnmanaged(FolderConfig) = std.ArrayListUnmanaged(FolderConfig).empty,
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) Config {
@@ -53,25 +59,42 @@ pub const Config = struct {
     }
 
     pub fn load(self: *Config, path: []const u8) !void {
-        const file = std.fs.cwd().openFile(path, .{}) catch |err| {
-            std.debug.print("Critical error: could not open {s} ({})", .{ path, err });
+        // Create null-terminated path for C interop
+        var path_buf = try self.allocator.alloc(u8, path.len + 1);
+        defer self.allocator.free(path_buf);
+        @memcpy(path_buf[0..path.len], path);
+        path_buf[path.len] = 0;
+        const fp: [*:0]const u8 = path_buf[0 .. path.len :0];
+        const mode: [*:0]const u8 = "rb";
+        const file = fopen(fp, mode) orelse {
+            std.debug.print("Critical error: could not open {s}\n", .{path});
             std.process.exit(1);
         };
-        defer file.close();
+        defer _ = fclose(file);
 
-        const content = try file.readToEndAlloc(self.allocator, 1024 * 1024);
+        // Get file size
+        _ = fseeko(file, 0, 2); // SEEK_END
+        const size: usize = @intCast(ftello(file));
+        _ = fseeko(file, 0, 0); // SEEK_SET
+
+        const content = try self.allocator.alloc(u8, size);
+        const nread = fread(content.ptr, 1, size, file);
+        if (nread != size) {
+            self.allocator.free(content);
+            std.debug.print("Critical error: short read on {s}\n", .{path});
+            std.process.exit(1);
+        }
+
         try self.parse(content);
+        self.allocator.free(content);
     }
 
     pub fn parse(self: *Config, content: []const u8) !void {
-        var fbs = std.io.fixedBufferStream(content);
-        var reader = fbs.reader();
-
         var current_folder: ?*FolderConfig = null;
         var current_profile: ?*Profile = null;
 
-        var buf: [4096]u8 = undefined;
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var line_iter = std.mem.splitScalar(u8, content, '\n');
+        while (line_iter.next()) |line| {
             const trimmed = std.mem.trim(u8, line, " \r\t");
             if (trimmed.len == 0 or trimmed[0] == ';') continue;
 
@@ -106,7 +129,7 @@ pub const Config = struct {
                     } else if (current_folder) |f| {
                         if (std.mem.eql(u8, key, "paths")) {
                             var piter = std.mem.splitSequence(u8, val, ",");
-                            var path_list = std.ArrayListUnmanaged([]const u8){};
+                            var path_list = std.ArrayListUnmanaged([]const u8).empty;
                             while (piter.next()) |path_item| {
                                 try path_list.append(self.allocator, try self.allocator.dupe(u8, std.mem.trim(u8, path_item, " ")));
                             }
@@ -149,7 +172,7 @@ pub const Config = struct {
 
 /// Parse a comma-separated list of filter strings into an owned slice of duped strings.
 fn parseFilterList(allocator: std.mem.Allocator, val: []const u8) ![][]const u8 {
-    var list = std.ArrayListUnmanaged([]const u8){};
+    var list = std.ArrayListUnmanaged([]const u8).empty;
     var iter = std.mem.splitSequence(u8, val, ",");
     while (iter.next()) |item| {
         const trimmed = std.mem.trim(u8, item, " \t");

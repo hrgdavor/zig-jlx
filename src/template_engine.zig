@@ -189,10 +189,10 @@ pub fn expandRuby(arena: std.mem.Allocator, message: []const u8, parsed: *const 
 
 test "template_engine shared samples" {
     const allocator = std.testing.allocator;
+    const io = std.testing.io;
+    const cwd = std.Io.Dir.cwd();
 
-    const file = try std.fs.cwd().openFile("test/template_samples.json", .{});
-    defer file.close();
-    const content = try file.readToEndAlloc(allocator, 512 * 1024);
+    const content = try cwd.readFileAlloc(io, "test/template_samples.json", allocator, std.Io.Limit.limited(512 * 1024));
     defer allocator.free(content);
 
     const Sample = struct {

@@ -2,7 +2,7 @@
 
 ### Prerequisites
 
-- **Zig ≥ 0.15.2** — [Download from ziglang.org](https://ziglang.org/download/)
+- **Zig ≥ 0.17.0** — [Download from ziglang.org](https://ziglang.org/download/)
 - No other external dependencies; all Zig package dependencies are fetched automatically.
 
 > [!NOTE]
@@ -59,7 +59,8 @@ zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-freebsd
 
 ### Cross-compilation
 
-Zig supports cross-compilation out of the box. You can build for any target from any host:
+Zig supports cross-compilation out of the box. You can build for any target from any host
+(all targets below are exercised by the release workflow):
 
 ```sh
 # Build a Linux binary from macOS or Windows
@@ -77,12 +78,12 @@ zig build -Doptimize=ReleaseSafe -Dtarget=x86_64-freebsd
 
 ### Optimize modes
 
-| Mode           | Description                                      |
-|----------------|--------------------------------------------------|
-| `Debug`        | *(default)* Fast build, no optimizations, asserts enabled |
-| `ReleaseSafe`  | Optimized, with safety checks / bounds checking  |
-| `ReleaseFast`  | Maximum performance, no safety checks            |
-| `ReleaseSmall` | Smallest binary size                             |
+| Mode             | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `Debug`          | *(default)* Fast build, no optimizations, asserts enabled |
+| `ReleaseSafe`    | Optimized, with safety checks / bounds checking           |
+| `ReleaseFast`    | Maximum performance, no safety checks                     |
+| `ReleaseSmall`   | Smallest binary size                                      |
 
 ### Running tests
 

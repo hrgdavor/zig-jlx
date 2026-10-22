@@ -137,7 +137,7 @@ pub const Processor = struct {
         var stdout_writer = std.Io.Writer.fixed(&stdout_buffer);
 
         try self.runInternal(&stdout_writer, io);
-        const written = stdout_buffer[0 .. std.Io.Writer.buffered(&stdout_writer).len];
+        const written = stdout_buffer[0..std.Io.Writer.buffered(&stdout_writer).len];
         if (written.len > 0) {
             _ = write(1, @constCast(written.ptr), written.len);
         }

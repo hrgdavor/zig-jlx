@@ -102,3 +102,26 @@ Still open (pre-existing, unrelated to the regex swap): non-Windows targets do
 not link because `Sleep`, `closesocket`, `GetStdHandle`, `WriteFile` and
 `_close` are referenced unconditionally, so the CI matrix's linux/freebsd/macos
 legs need platform guards before a release run can go green.
+
+## Follow-up: platform guards — resolved
+
+The non-Windows link failures were fixed with comptime OS gates (Windows
+behaviour unchanged):
+
+| File                | Fix                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `src/processor.zig` | `sleepMs` uses `Sleep` on Windows, `nanosleep` elsewhere (0.17 moved sleeping into `std.Io`, which the follow loops do not carry) |
+| `src/server.zig`    | `closeSocket` (`closesocket` vs `close`) and `closeFile` (`_close` vs `close`) helpers |
+| `src/main.zig`      | `writeStderr` uses `GetStdHandle`/`WriteFile` on Windows, `std.debug.print` elsewhere  |
+
+Cross-build matrix verified locally with `D:\wrk\zig\17\zig.exe` (ReleaseSafe):
+
+- `x86_64-linux-musl` — ok
+- `x86_64-freebsd` — ok
+- `x86_64-windows` — ok
+- `x86_64-macos` — ok
+- `aarch64-macos` — ok
+
+Native `zig build` + `zig build test` (22/22) remain green. Cross-compilation is
+still required in CI for musl, FreeBSD (no hosted runner) and x86_64-macos on
+the arm64 runner, so the `-Dtarget` matrix entries stay.

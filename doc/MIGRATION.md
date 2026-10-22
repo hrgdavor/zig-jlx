@@ -4,7 +4,7 @@ A living document tracking the migration of `jlx` (a CLI tool for reading and
 formatting structured JSON log files) from its Node.js reference implementation
 to **Zig 0.17**. Update this file as work progresses.
 
-- **Last updated:** 2026-10-21 10:53 (Europe/Zagreb)
+- **Last updated:** 2026-10-22 (Europe/Zagreb)
 - **Target toolchain:** Zig **0.17.0** — `D:\wrk\zig\17\zig.exe`
 - **Reference impl:** `src-js/` (Node.js / bun) + `src-js/tests/` parity tests
 
@@ -222,6 +222,10 @@ Verification on Zig 0.17.0 (Windows): `zig build` and
 (3 new regex-filter tests), and `-i`/`-e` regex filters match correctly against
 `test/test.log`.
 
-Known remaining gap (pre-existing, unrelated to the regex swap): non-Windows
-targets still fail to link because `Sleep`, `closesocket`, `GetStdHandle`,
-`WriteFile` and `_close` are referenced unconditionally.
+Cross-compilation: the five release targets (`x86_64-linux-musl`,
+`x86_64-freebsd`, `x86_64-windows`, `x86_64-macos`, `aarch64-macos`) all build
+with `-Doptimize=ReleaseSafe` after the platform guards in `processor.zig`
+(sleep), `server.zig` (socket/file close) and `main.zig` (stderr) — previously
+every non-Windows target failed to link on Windows-only symbols. The CI matrix
+keeps its `-Dtarget` entries because musl, FreeBSD (no hosted runner) and
+x86_64-macos on the arm64 runner are genuine cross builds.

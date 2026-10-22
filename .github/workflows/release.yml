@@ -11,6 +11,10 @@ permissions:
 jobs:
   build:
     strategy:
+      # Each runner builds in its own OS environment. The explicit `-Dtarget`
+      # stays because three legs are still cross builds: linux-musl (glibc
+      # runner -> musl target), freebsd (no GitHub-hosted runner exists) and
+      # x86_64-macos on the arm64 macOS runner.
       matrix:
         include:
           - os: ubuntu-latest

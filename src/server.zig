@@ -196,7 +196,7 @@ pub const Server = struct {
                 @memcpy(full_path[www_path.len + 1 .. full_path.len - 1], relative_path);
                 full_path[full_path.len - 1] = 0;
 
-                const fd = open(full_path[0..full_path.len - 1 :0], 0, 0);
+                const fd = open(full_path[0 .. full_path.len - 1 :0], 0, 0);
                 if (fd < 0) {
                     const msg = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
                     try socketSend(conn_fd, msg);

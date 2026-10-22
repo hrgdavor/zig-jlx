@@ -24,23 +24,23 @@ jlx -c <config> [options] [file]
 
 ### Options
 
-| Flag        | Long form       | Description                                          |
-|-------------|-----------------|------------------------------------------------------|
-| `-c <path>` | `--config`      | Config file (**required**)                           |
-| `-f`        | `--follow`      | Follow the file — shows newly appended lines         |
-| `-p <name>` | `--profile`     | Profile name to use from the matched config section  |
-| `-o <path>` | `--output`      | Write output to a file (default: stdout)             |
-| `-x`        | `--passthrough` | Echo original line as-is (valid JSON lines only)     |
-| `-i <text>` | `--include`     | Include only lines matching filter (repeatable)      |
-| `-e <text>` | `--exclude`     | Exclude lines matching filter (repeatable)           |
-| `-r <spec>` | `--range`       | Filter by time/date range (e.g. "08:00..09:30") or head/tail lines (e.g. "30", "-100") |
-| `-z <zone>` | `--zone`        | Timezone offset (e.g. "+01:00", "-05:00", "UTC")     |
-| `-v <spec>` | `--values`      | Collect unique values for a key (prefix:key)         |
-|             | `--keys`        | Collect and list all unique JSON keys discovered     |
-|             | `--strip`       | Standalone: strip leading text before first `{`      |
-| `-s`        | `--serve`       | Start a web server for interactive log analysis      |
-|             | `--port <num>`  | Port to listen on (default 3000)                      |
-| `-w <path>` | `--www`         | Path to serve static files from (default: internal)  |
+| Flag          | Long form         | Description                                                                            |
+| ------------- | ----------------- | -------------------------------------------------------------------------------------- |
+| `-c <path>`   | `--config`        | Config file (**required**)                                                             |
+| `-f`          | `--follow`        | Follow the file — shows newly appended lines                                           |
+| `-p <name>`   | `--profile`       | Profile name to use from the matched config section                                    |
+| `-o <path>`   | `--output`        | Write output to a file (default: stdout)                                               |
+| `-x`          | `--passthrough`   | Echo original line as-is (valid JSON lines only)                                       |
+| `-i <text>`   | `--include`       | Include only lines matching filter (repeatable)                                        |
+| `-e <text>`   | `--exclude`       | Exclude lines matching filter (repeatable)                                             |
+| `-r <spec>`   | `--range`         | Filter by time/date range (e.g. "08:00..09:30") or head/tail lines (e.g. "30", "-100") |
+| `-z <zone>`   | `--zone`          | Timezone offset (e.g. "+01:00", "-05:00", "UTC")                                       |
+| `-v <spec>`   | `--values`        | Collect unique values for a key (prefix:key)                                           |
+|               | `--keys`          | Collect and list all unique JSON keys discovered                                       |
+|               | `--strip`         | Standalone: strip leading text before first `{`                                        |
+| `-s`          | `--serve`         | Start a web server for interactive log analysis                                        |
+|               | `--port <num>`    | Port to listen on (default 3000)                                                       |
+| `-w <path>`   | `--www`           | Path to serve static files from (default: internal)                                    |
 
 ### Input modes
 
@@ -100,19 +100,19 @@ Each `[folders]` section can contain **`[profile.<name>]`** sub-sections that ov
 
 ### `[folders]` keys
 
-| Key        | Default                          | Description                                            |
-|------------|----------------------------------|--------------------------------------------------------|
-| `paths`    | *(none — fallback)*              | Comma-separated directory prefixes to match            |
-| `output`   | `{level} {timestamp} {message}`  | Output format string (see Placeholders below)          |
-| `timestamp`| `ts`                             | JSON key for the timestamp field                       |
-| `level`    | `level`                          | JSON key for the log level field                       |
-| `message`  | `message`                        | JSON key for the log message field                     |
-| `thread`   | `thread`                         | JSON key for the thread field                          |
-| `logger`   | `logger`                         | JSON key for the logger name field                     |
-| `trace`    | `trace`                          | JSON key for the stack trace field                     |
-| `include`      | *(none)*                         | Comma-separated filters — only matching lines shown. Supports key-specific and regex matching.   |
-| `exclude`      | *(none)*                         | Comma-separated filters — matching lines are hidden. Supports key-specific and regex matching.   |
-| `message_expand` | *(none)*                       | Expander syntax for message templates: `curly`, `js`, `ruby`, `double_curly`, `brackets`, `parens`, `printf`, `env`, `colon` |
+| Key              | Default                            | Description                                                                                    |
+| ---------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `paths`          | *(none — fallback)*                | Comma-separated directory prefixes to match                                                    |
+| `output`         | `{level} {timestamp} {message}`    | Output format string (see Placeholders below)                                                  |
+| `timestamp`      | `ts`                               | JSON key for the timestamp field                                                               |
+| `level`          | `level`                            | JSON key for the log level field                                                               |
+| `message`        | `message`                          | JSON key for the log message field                                                             |
+| `thread`         | `thread`                           | JSON key for the thread field                                                                  |
+| `logger`         | `logger`                           | JSON key for the logger name field                                                             |
+| `trace`          | `trace`                            | JSON key for the stack trace field                                                             |
+| `include`        | *(none)*                           | Comma-separated filters — only matching lines shown. Supports key-specific and regex matching. |
+| `exclude`        | *(none)*                           | Comma-separated filters — matching lines are hidden. Supports key-specific and regex matching. |
+| `message_expand` | *(none)*                           | Expander syntax for message templates: `curly`, `js`, `ruby`, `double_curly`, `brackets`, `parens`, `printf`, `env`, `colon` |
 
 ### `[profile.<name>]` keys
 
@@ -145,7 +145,7 @@ output    = [{level}] {timestamp}: {message}
 
 ## Filtering Rules (`-i`, `-e`, `include`, `exclude`)
 
-You can filter log messages by providing a comma-separated list of match patterns. Filters can be global (searching the raw JSON line before parsing, which is very fast) or key-specific. They also support basic substrings or Regular Expressions using the fast, lightweight `mvzr` engine.
+You can filter log messages by providing a comma-separated list of match patterns. Filters can be global (searching the raw JSON line before parsing, which is very fast) or key-specific. They also support basic substrings or Regular Expressions using the linear-time [`ezi_gex`](https://github.com/shaik-abdul-thouhid/ezi-gex) engine.
 
 ### Global Literals
 Any string without special prefixes: Searches the exact string literal across the entire raw JSON line.
@@ -175,19 +175,19 @@ Use `{key}` in the `output` format string. Any JSON key can be used; missing key
 
 The following aliases map to the JSON key configured in the matched `[folders]` section (or profile override):
 
-| Placeholder            | Resolves to                                          |
-|------------------------|------------------------------------------------------|
-| `{timestamp}`          | Configured timestamp key — raw value                 |
-| `{timestamp:datetime}` | Configured timestamp key — ISO `YYYY-MM-DD HH:MM:SS` |
-| `{timestamp:time}`     | Configured timestamp key — `HH:MM:SS`                |
-| `{timestamp:timems}`   | Configured timestamp key — `HH:MM:SS.mmm`            |
-| `{key:N}`              | Right-pad field `key` to `N` characters (e.g. `{level:6}`) |
-| `{key:time}`           | Format *any* numeric field as time (also `:datetime`, `:timems`) |
-| `{level}`              | Configured level key                                 |
-| `{message}`            | Configured message key                               |
-| `{thread}`             | Configured thread key                                |
-| `{logger}`             | Configured logger key                                |
-| `{trace}`              | Configured trace key                                 |
+| Placeholder              | Resolves to                                                      |
+| ------------------------ | ---------------------------------------------------------------- |
+| `{timestamp}`            | Configured timestamp key — raw value                             |
+| `{timestamp:datetime}`   | Configured timestamp key — ISO `YYYY-MM-DD HH:MM:SS`             |
+| `{timestamp:time}`       | Configured timestamp key — `HH:MM:SS`                            |
+| `{timestamp:timems}`     | Configured timestamp key — `HH:MM:SS.mmm`                        |
+| `{key:N}`                | Right-pad field `key` to `N` characters (e.g. `{level:6}`)       |
+| `{key:time}`             | Format *any* numeric field as time (also `:datetime`, `:timems`) |
+| `{level}`                | Configured level key                                             |
+| `{message}`              | Configured message key                                           |
+| `{thread}`               | Configured thread key                                            |
+| `{logger}`               | Configured logger key                                            |
+| `{trace}`                | Configured trace key                                             |
 
 ### Arbitrary JSON keys
 
@@ -226,17 +226,17 @@ Without `message_expand`, the `{userId}` and `{ip}` tokens inside the message st
 
 ### Supported expanders
 
-| Value          | Syntax inside the message              | Example template                        |
-|----------------|----------------------------------------|-----------------------------------------|
-| `curly`        | `{key}`                                | `"Hello {name}"`                        |
-| `js`           | `${key}`                               | `"Hello ${name}"`                       |
-| `double_curly` | `{{key}}`                              | `"Hello {{name}}"`                      |
-| `brackets`     | `[key]`                                | `"Hello [name]"`                        |
-| `ruby`         | `#{key}`                               | `"Hello #{name}"`                       |
-| `parens`       | `(key)`                                | `"Hello (name)"`                        |
-| `printf`       | `%key`                                 | `"Hello %name"`                         |
-| `env`          | `$key`                                 | `"Hello $name"`                         |
-| `colon`        | `:key`                                 | `"Hello :name"`                         |
+| Value            | Syntax inside the message                | Example template                          |
+| ---------------- | ---------------------------------------- | ----------------------------------------- |
+| `curly`          | `{key}`                                  | `"Hello {name}"`                          |
+| `js`             | `${key}`                                 | `"Hello ${name}"`                         |
+| `double_curly`   | `{{key}}`                                | `"Hello {{name}}"`                        |
+| `brackets`       | `[key]`                                  | `"Hello [name]"`                          |
+| `ruby`           | `#{key}`                                 | `"Hello #{name}"`                         |
+| `parens`         | `(key)`                                  | `"Hello (name)"`                          |
+| `printf`         | `%key`                                   | `"Hello %name"`                           |
+| `env`            | `$key`                                   | `"Hello $name"`                           |
+| `colon`          | `:key`                                   | `"Hello :name"`                           |
 
 Placeholders that reference keys **absent from that log line are left intact** — no data is lost.
 

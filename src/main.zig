@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const args_mod = @import("args.zig");
 const config_mod = @import("config.zig");
 const processor_mod = @import("processor.zig");
@@ -8,9 +9,14 @@ extern "c" fn GetStdHandle(nStdHandle: i32) ?*anyopaque;
 extern "c" fn WriteFile(hFile: ?*anyopaque, lpBuffer: *const anyopaque, nNumberOfBytesToWrite: u32, lpNumberOfBytesWritten: *u32, lpOverlapped: ?*anyopaque) i32;
 
 fn writeStderr(s: []const u8) void {
-    const handle = GetStdHandle(-12) orelse return; // STD_ERROR_HANDLE
-    var written: u32 = 0;
-    _ = WriteFile(handle, @ptrCast(s.ptr), @intCast(s.len), &written, null);
+    if (builtin.os.tag == .windows) {
+        const handle = GetStdHandle(-12) orelse return; // STD_ERROR_HANDLE
+        var written: u32 = 0;
+        _ = WriteFile(handle, @ptrCast(s.ptr), @intCast(s.len), &written, null);
+    } else {
+        // Windows-only path above; elsewhere stderr via the standard writer.
+        std.debug.print("{s}", .{s});
+    }
 }
 
 const HELP =
@@ -39,14 +45,14 @@ const HELP =
     \\
 ;
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.c_allocator;
 
     var parse_arena = std.heap.ArenaAllocator.init(allocator);
     defer parse_arena.deinit();
     const parse_allocator = parse_arena.allocator();
 
-    const args = try args_mod.Args.parse(parse_allocator);
+    const args = try args_mod.Args.parse(init);
 
     if (args.help) {
         try args_mod.Args.printHelp();

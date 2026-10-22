@@ -37,7 +37,7 @@ const posix = if (builtin.os.tag != .windows) struct {
     pub extern "c" fn mktime(*Tm) i64;
 } else struct {};
 
-const mvzr = @import("mvzr");
+const gex = @import("ezi_gex");
 
 pub const FilterType = enum {
     global_literal,
@@ -46,12 +46,44 @@ pub const FilterType = enum {
     key_regex,
 };
 
+/// A compiled regex together with the per-search scratch state it needs.
+/// `gex.Regex` is immutable and could be shared, but every search mutates a
+/// `gex.Scratch`, so each Filter keeps its own (one Filter is used by a single
+/// reader/thread at a time).
+const RegexFilter = struct {
+    re: gex.Regex,
+    scratch: gex.Scratch,
+
+    fn init(allocator: std.mem.Allocator, pattern: []const u8) !RegexFilter {
+        var diag: gex.Diagnostic = .{};
+        var re = gex.compileRuntime(allocator, pattern, &diag, .{}) catch |err| switch (err) {
+            error.OutOfMemory => return error.OutOfMemory,
+            else => return error.InvalidRegex,
+        };
+        errdefer re.deinit();
+
+        var scratch = try re.initScratch(allocator);
+        errdefer scratch.deinit(allocator);
+
+        return .{ .re = re, .scratch = scratch };
+    }
+
+    fn deinit(self: *RegexFilter, allocator: std.mem.Allocator) void {
+        self.re.deinit();
+        self.scratch.deinit(allocator);
+    }
+
+    fn isMatch(self: *RegexFilter, input: []const u8) bool {
+        return self.re.isMatch(&self.scratch, input);
+    }
+};
+
 /// A filter that supports literals, regex, and key-specific matching.
 pub const Filter = struct {
     filter_type: FilterType,
     key: ?[]const u8 = null,
     text: ?[]const u8 = null,
-    re: ?mvzr.Regex = null,
+    re: ?RegexFilter = null,
 
     pub fn parse(allocator: std.mem.Allocator, input: []const u8) !Filter {
         var is_re = false;
@@ -93,10 +125,10 @@ pub const Filter = struct {
         }
 
         if (is_re) {
-            f.re = mvzr.compile(filter_part);
-            if (f.re == null) {
-                return error.InvalidRegex;
-            }
+            f.re = RegexFilter.init(allocator, filter_part) catch |err| {
+                if (f.key) |k| allocator.free(k);
+                return err;
+            };
         } else {
             f.text = try allocator.dupe(u8, filter_part);
         }
@@ -107,7 +139,7 @@ pub const Filter = struct {
     pub fn deinit(self: *Filter, allocator: std.mem.Allocator) void {
         if (self.key) |k| allocator.free(k);
         if (self.text) |t| allocator.free(t);
-        // mvzr.Regex uses no allocation so doesn't need deinit.
+        if (self.re) |*r| r.deinit(allocator);
     }
 
     /// Match Phase 1: fast global raw string check
@@ -115,8 +147,9 @@ pub const Filter = struct {
         return switch (self.filter_type) {
             .global_literal => std.mem.indexOf(u8, line, self.text.?) != null,
             .global_regex => {
-                var self_mut = @constCast(self);
-                return self_mut.re.?.isMatch(line);
+                const self_mut = @constCast(self);
+                if (self_mut.re) |*r| return r.isMatch(line);
+                return false;
             },
             else => true, // Ignore key filters in raw pass
         };
@@ -132,8 +165,9 @@ pub const Filter = struct {
                     if (self.filter_type == .key_literal) {
                         return std.mem.indexOf(u8, val_str, self.text.?) != null;
                     } else {
-                        var self_mut = @constCast(self);
-                        return self_mut.re.?.isMatch(val_str);
+                        const self_mut = @constCast(self);
+                        if (self_mut.re) |*r| return r.isMatch(val_str);
+                        return false;
                     }
                 }
                 return false;
@@ -198,6 +232,43 @@ pub fn passesParsed(line: []const u8, parsed: *const std.StringHashMap([]const u
         }
     }
     return false;
+}
+
+// ---------------------------------------------------------------------------
+// Regex filter tests (ezi_gex)
+// ---------------------------------------------------------------------------
+
+test "Filter regex global" {
+    var f = try Filter.parse(std.testing.allocator, "~foo\\d+");
+    defer f.deinit(std.testing.allocator);
+
+    try std.testing.expect(f.filter_type == .global_regex);
+    try std.testing.expect(try f.matchesRaw("xx foo42 yy"));
+    try std.testing.expect(!try f.matchesRaw("xx foo yy"));
+}
+
+test "Filter regex key-specific" {
+    var f = try Filter.parse(std.testing.allocator, "level:re:^err");
+    defer f.deinit(std.testing.allocator);
+
+    try std.testing.expect(f.filter_type == .key_regex);
+
+    var parsed = std.StringHashMap([]const u8).init(std.testing.allocator);
+    defer parsed.deinit();
+    try parsed.put("level", "\"error\"");
+    try parsed.put("msg", "error happened");
+
+    try std.testing.expect(try f.matchesParsed(&parsed));
+
+    var other = std.StringHashMap([]const u8).init(std.testing.allocator);
+    defer other.deinit();
+    try other.put("level", "\"info\"");
+    try std.testing.expect(!try f.matchesParsed(&other));
+}
+
+test "Filter regex invalid pattern" {
+    try std.testing.expectError(error.InvalidRegex, Filter.parse(std.testing.allocator, "~(unclosed"));
+    try std.testing.expectError(error.InvalidRegex, Filter.parse(std.testing.allocator, "key:re:("));
 }
 
 // ---------------------------------------------------------------------------

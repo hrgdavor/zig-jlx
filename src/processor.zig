@@ -13,8 +13,21 @@ extern "c" fn read(fd: i32, buf: *anyopaque, count: usize) i64;
 extern "c" fn lseek(fd: i32, offset: i64, whence: c_int) i64;
 extern "c" fn Sleep(ms: u32) u32;
 
+const CTimespec = extern struct { sec: i64, nsec: i64 };
+extern "c" fn nanosleep(req: *const CTimespec, rem: ?*CTimespec) c_int;
+
+/// Poll interval used by the `--follow` loops. Zig 0.17 folded sleeping into
+/// `std.Io`, which these loops do not carry, so this stays a thin platform shim.
 fn sleepMs(ms: u64) void {
-    _ = Sleep(@intCast(ms));
+    if (builtin.os.tag == .windows) {
+        _ = Sleep(@intCast(ms));
+    } else {
+        var ts = CTimespec{
+            .sec = @intCast(ms / 1000),
+            .nsec = @intCast((ms % 1000) * 1_000_000),
+        };
+        _ = nanosleep(&ts, null);
+    }
 }
 
 const DUMMY_CFG = config_mod.FolderConfig{

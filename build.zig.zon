@@ -25,24 +25,24 @@
     .fingerprint = 0x902529731eb1516b, // Changing this has security and trust implications.
     // Tracks the earliest Zig version that the package considers to be a
     // supported use case.
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.17.0",
     // This field is optional.
     // Each dependency must either provide a `url` and `hash`, or a `path`.
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        .mvzr = .{
-            .url = "https://codeload.github.com/mnemnion/mvzr/tar.gz/refs/tags/v0.3.12",
-            .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
-        },
         .libxev = .{
             .url = "https://codeload.github.com/mitchellh/libxev/tar.gz/451a2bc03644c2b70fb28a808313d12989bfa8e3",
-            .hash = "libxev-0.0.0-86vtc0IbEwBzMSXa-ZPZ8JpcV4Mw1SrsTuvtJmFAQ7Uu",
+            .hash = "libxev-0.0.0-86vtc8QQFACz0sVc7U-VDiDIgH-XfBuEY5JpABLjHNpn",
         },
         .args = .{
             .url = "https://codeload.github.com/ikskuh/zig-args/tar.gz/ad3c89ecdb2979b8b5d52b43b78e79bf51293235",
-            .hash = "N-V-__8AAI_RAADz2TiHUzG5-0Mk7IZHR-h1SZgUrb_k4c7d",
+            .hash = "args-0.0.0-CiLiqmHiAABlN6icC9sZHdp8HVplOXDxuUNz2VUY_K2X",
+        },
+        .ezi_gex = .{
+            .url = "https://codeload.github.com/shaik-abdul-thouhid/ezi-gex/tar.gz/refs/tags/v0.8.0",
+            .hash = "ezi_gex-0.8.0-fTQAPA9qKQA7mCilJYQta0IEhAr06iMvsCcSzImz6GRb",
         },
     },
     .paths = .{

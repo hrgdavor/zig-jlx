@@ -94,10 +94,11 @@ pub const Args = struct {
         };
     };
 
-    pub fn parse(arena_allocator: std.mem.Allocator) !Args {
+    pub fn parse(init: std.process.Init) !Args {
         // This is the core change: parseForCurrentProcess handles flags
-        // found anywhere in the command line (interspersed).
-        const parsed = try args_lib.parseForCurrentProcess(ArgsConfig, arena_allocator, args_lib.ErrorHandling.print);
+        // found anywhere in the command line (interspersed). Since Zig 0.17 it
+        // takes the process `Init` (it allocates results in its arena).
+        const parsed = try args_lib.parseForCurrentProcess(ArgsConfig, init, args_lib.ErrorHandling.print);
 
         var args = Args{};
 

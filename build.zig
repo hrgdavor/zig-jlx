@@ -28,11 +28,11 @@ pub fn build(b: *std.Build) void {
     // to our consumers. We must give it a name because a Zig package can expose
     // multiple modules and consumers will need to be able to specify which
     // module they want to access.
-    const mvzr_dep = b.dependency("mvzr", .{
+    const gex_dep = b.dependency("ezi_gex", .{
         .target = target,
         .optimize = optimize,
     });
-    const mvzr_mod = mvzr_dep.module("mvzr");
+    const gex_mod = gex_dep.module("ezi_gex");
 
     const args_dep = b.dependency("args", .{
         .target = target,
@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
         // which requires us to specify a target.
         .target = target,
         .imports = &.{
-            .{ .name = "mvzr", .module = mvzr_mod },
+            .{ .name = "ezi_gex", .module = gex_mod },
             .{ .name = "args", .module = args_mod },
         },
     });
@@ -103,7 +103,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "zig_jlx", .module = mod },
-                .{ .name = "mvzr", .module = mvzr_mod },
+                .{ .name = "ezi_gex", .module = gex_mod },
                 .{ .name = "args", .module = args_mod },
                 .{ .name = "web_assets", .module = web_assets.createModule() },
             },

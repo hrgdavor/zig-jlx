@@ -19,13 +19,31 @@ extern "c" fn accept(sockfd: std.posix.socket_t, addr: *anyopaque, addrlen: *c_u
 extern "c" fn setsockopt(sockfd: std.posix.socket_t, level: c_int, optname: c_int, optval: *const anyopaque, optlen: c_uint) c_int;
 extern "c" fn recv(sockfd: std.posix.socket_t, buf: *anyopaque, len: c_int, flags: c_int) c_int;
 extern "c" fn send(sockfd: std.posix.socket_t, buf: *const anyopaque, len: c_int, flags: c_int) c_int;
-extern "c" fn close(fd: std.posix.socket_t) c_int;
-extern "c" fn _close(fd: i32) c_int;
+extern "c" fn close(fd: c_int) c_int;
+extern "c" fn _close(fd: c_int) c_int;
 extern "c" fn closesocket(s: std.posix.socket_t) c_int;
 extern "c" fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) i32;
 extern "c" fn lseek(fd: i32, offset: i64, whence: c_int) i64;
 extern "c" fn read(fd: i32, buf: *anyopaque, count: usize) i64;
 extern "c" fn WSAStartup(wVersionRequested: u16, lpWSAData: *anyopaque) c_int;
+
+/// Winsock needs `closesocket`; POSIX uses `close` for sockets too.
+fn closeSocket(handle: std.posix.socket_t) void {
+    if (is_windows) {
+        _ = closesocket(handle);
+    } else {
+        _ = close(handle);
+    }
+}
+
+/// Plain file descriptors: Windows CRT spells it `_close`, POSIX `close`.
+fn closeFile(fd: i32) void {
+    if (is_windows) {
+        _ = _close(fd);
+    } else {
+        _ = close(fd);
+    }
+}
 
 fn socketRecv(handle: std.posix.socket_t, buf: []u8) !usize {
     const n = recv(handle, @ptrCast(buf.ptr), @intCast(buf.len), 0);
@@ -138,7 +156,7 @@ pub const Server = struct {
     }
 
     fn handleConnectionFd(self: *Server, conn_fd: std.posix.socket_t) !void {
-        defer _ = closesocket(conn_fd);
+        defer closeSocket(conn_fd);
 
         var buf: [4096]u8 = undefined;
         const n = try socketRecv(conn_fd, &buf);
@@ -184,7 +202,7 @@ pub const Server = struct {
                     try socketSend(conn_fd, msg);
                     return;
                 }
-                defer _ = _close(fd);
+                defer closeFile(fd);
 
                 const file_size: i64 = lseek(fd, 0, 2);
                 _ = lseek(fd, 0, 0);

@@ -12,15 +12,15 @@ to **Zig 0.17**. Update this file as work progresses.
 
 ## 1. Repository layout
 
-| Path          | Purpose                                                      |
-| ------------- | ------------------------------------------------------------ |
-| `src/`        | Zig implementation (main, processor, parser, filter, …)      |
-| `src-js/`     | Original Node.js reference + parity test suite               |
-| `zig-pkg/`    | Vendored dependencies (`libxev`, `mvzr`, `args`)             |
-| `test/`       | Test fixtures (`test.conf`, `test.log`, `*_samples.json`)    |
-| `doc/`        | Per-module docs + this migration tracker                     |
-| `docs/`       | Bundled web demo (built from `src-js`)                       |
-| `build.zig`   | Build script (Zig 0.17 `std.Io` APIs)                        |
+| Path          | Purpose                                                         |
+| ------------- | --------------------------------------------------------------- |
+| `src/`        | Zig implementation (main, processor, parser, filter, …)         |
+| `src-js/`     | Original Node.js reference + parity test suite                  |
+| `zig-pkg/`    | Vendored dependencies (`libxev`, `ezi_gex`, `ezi_code`, `args`) |
+| `test/`       | Test fixtures (`test.conf`, `test.log`, `*_samples.json`)       |
+| `doc/`        | Per-module docs + this migration tracker                        |
+| `docs/`       | Bundled web demo (built from `src-js`)                          |
+| `build.zig`   | Build script (Zig 0.17 `std.Io` APIs)                           |
 
 ---
 
@@ -185,3 +185,43 @@ Steps:
   deleted (neither referenced in source code).
 - [x] Document the `ZIG_GLOBAL_CACHE_DIR` workspace-local workaround.
   Documented in the work log (07:42 entry). `.zig-cache` is in `.gitignore`.
+
+---
+
+## 6. Regex engine swap: mvzr → ezi_gex (2026-10-22)
+
+`mvzr` no longer compiles on Zig 0.17 (`src/mvzr.zig:104` uses the removed `**`
+operator), so the regex dependency was replaced with
+[`ezi_gex`](https://github.com/shaik-abdul-thouhid/ezi-gex) **v0.8.0** — a
+linear-time (Thompson NFA / DFA) engine that targets Zig 0.17.0 and brings its
+own `ezi_code` Unicode data as a transitive dependency.
+
+| Dependency | From                                | To                                                       |
+| ---------- | ----------------------------------- | -------------------------------------------------------- |
+| `mvzr`     | `v0.3.12` (did not build on 0.17)   | **removed**                                              |
+| `ezi_gex`  | —                                   | **`v0.8.0`** (`ezi_code` `v0.6.0` resolves transitively) |
+
+Source changes:
+
+- `build.zig.zon` — `mvzr` entry replaced by `ezi_gex` (tarball URL + hash);
+  `minimum_zig_version` raised to `0.17.0`.
+- `build.zig` — `b.dependency("ezi_gex")` / `.module("ezi_gex")`, imported as
+  `@import("ezi_gex")`.
+- `src/filter.zig` — `gex.compileRuntime(gpa, pattern, &diag, .{})` replaces
+  `mvzr.compile(pattern)`. ezi_gex needs a caller-owned `Scratch` per search,
+  so a `RegexFilter` (compiled regex + scratch) lives inside each `Filter` and
+  is released in `Filter.deinit`. A malformed pattern still surfaces as
+  `error.InvalidRegex`.
+- `src/args.zig` / `src/main.zig` — the pinned `args` revision now expects
+  `std.process.Init` in `parseForCurrentProcess`, so `main` takes
+  `init: std.process.Init` and forwards it to `Args.parse`.
+- `.github/workflows/release.yml` — CI Zig pin raised `0.15.2` → `0.17.0`.
+
+Verification on Zig 0.17.0 (Windows): `zig build` and
+`zig build -Doptimize=ReleaseSafe` succeed, `zig build test` → **22/22 pass**
+(3 new regex-filter tests), and `-i`/`-e` regex filters match correctly against
+`test/test.log`.
+
+Known remaining gap (pre-existing, unrelated to the regex swap): non-Windows
+targets still fail to link because `Sleep`, `closesocket`, `GetStdHandle`,
+`WriteFile` and `_close` are referenced unconditionally.
